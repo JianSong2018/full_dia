@@ -41,7 +41,12 @@ We recommend using [Conda](https://www.anaconda.com/) to create a Python environ
     ```bash
     pip install full_dia[cuda11] or pip install full_dia[cuda12]
     ```
-   
+
+- Alternatively, you can create a Conda environment with Full-DIA in one command:
+    ```bash
+    conda env create -f https://raw.githubusercontent.com/JianSong2018/full_dia/main/environment/environment_cuda12.yml
+    ```
+
 ---
 ### Usage
 ```bash
