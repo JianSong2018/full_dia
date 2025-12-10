@@ -21,7 +21,7 @@ We recommend using [Conda](https://www.anaconda.com/) to create a Python environ
 
 1. Create a Python environment with version 3.9.18.
     ```bash
-    conda create -n full_env python=3.9.18 "numpy<2.0.0"
+    conda create -n full_env python=3.12
     conda activate full_env
     ```
 
@@ -29,19 +29,17 @@ We recommend using [Conda](https://www.anaconda.com/) to create a Python environ
   - CUDA-12
     ```bash
     pip install torch==2.3.1 --index-url https://download.pytorch.org/whl/cu121
-    pip install cupy-cuda12x==13.3
     conda install cudatoolkit
     ```
   - CUDA-11
     ```bash
     pip install torch==2.3.1 --index-url https://download.pytorch.org/whl/cu118
-    pip install cupy-cuda11x==13.3
     conda install cudatoolkit
     ```
 
 3. Install Full-DIA
     ```bash
-    pip install full_dia
+    pip install full_dia[cuda11] or pip install full_dia[cuda12]
     ```
    
 ---

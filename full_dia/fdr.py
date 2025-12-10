@@ -469,7 +469,7 @@ def cal_q_pg(df_input_raw, q_pr_cut, run_or_global):
     if 'strip_seq' not in df_input.columns:
         if 'simple_seq' not in df_input.columns:
             df_input['simple_seq'] = df_input['pr_id'].str[:-1].replace(
-                ['C\(UniMod:4\)', 'M\(UniMod:35\)'], ['c', 'm'], regex=True
+                [r'C\(UniMod:4\)', r'M\(UniMod:35\)'], ['c', 'm'], regex=True
             )
         df_input['strip_seq'] = df_input['simple_seq'].str.upper()
 

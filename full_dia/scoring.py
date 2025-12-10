@@ -495,9 +495,10 @@ def scoring_center_mz(df_batch, mzs_input):
 @profile
 def scoring_meta(df):
     # pr info: mz, charge(one-hot), len, fg_num，
-    pr_charges = pd.get_dummies(df['pr_charge']).astype(np.int8)
-    columns = ['score_pr_charge_' + str(i) for i in range(pr_charges.shape[1])]
-    df[columns] = pr_charges.values
+
+    c = pd.Categorical(df['pr_charge'], categories=[1, 2, 3, 4])
+    pr_charges = pd.get_dummies(c, prefix='score_pr_charge').astype(np.int8)
+    df = pd.concat([df, pr_charges], axis=1)
 
     df['score_pr_len'] = df['simple_seq'].str.len().astype(np.int8)
     df['score_fg_num'] = df['fg_num'].astype(np.int8)

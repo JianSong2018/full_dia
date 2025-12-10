@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "full_dia"
+dynamic = ["version"]
+description = "Generate a missingness-free protein quantification matrix from multiple diaPASEF runs through deep learning-based scoring."
+readme = "README.md"
+requires-python = ">=3.10.0"
+license = "Apache-2.0"
+
+authors = [
+  { name = "Jian Song", email = "jian.song.2025@outlook.com" }
+]
+
+dependencies = [
+  "psutil",
+  "h5py",
+  "matplotlib",
+  "networkx",
+  "numba",
+  "numpy<2.0.0",
+  "pandas",
+  "pyzstd",
+  "scikit-learn",
+  "scipy",
+  "statsmodels",
+  "pyarrow"
+]
+
+[project.optional-dependencies]
+cuda11 = ["cupy-cuda11x==13.3"]
+cuda12 = ["cupy-cuda12x==13.3"]
+
+dev = [
+  "pytest>=6",
+  "flake8",
+  "black"
+]
+docs = [
+  "sphinx",
+  "sphinx-rtd-theme"
+]
+
+[tool.setuptools.dynamic]
+version = {attr = "full_dia.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[project.scripts]
+full_dia = "full_dia.main:main"

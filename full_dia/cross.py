@@ -134,7 +134,7 @@ def cal_global(lib, top_k_fg, top_k_pr, multi_ws=[], df_v=[], df_global1=None):
     # assemble: proteotypic, protein_id, protein_name, protein_group
     # cscore_pg_global, q_pg_global
     df_global['simple_seq'] = df_global['pr_id'].str[:-1].replace(
-        ['C\(UniMod:4\)', 'M\(UniMod:35\)'], ['c', 'm'], regex=True
+        [r'C\(UniMod:4\)', r'M\(UniMod:35\)'], ['c', 'm'], regex=True
     )
     df_global['strip_seq'] = df_global['simple_seq'].str.upper()
     if df_global1 is None:
