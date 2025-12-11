@@ -22,7 +22,7 @@ class Logger():
     logger.propagate = False # no forward transfer
 
     @classmethod
-    def set_logger(cls, dir_out, is_time_name=True):
+    def set_logger(cls, dir_out, is_time_name=False):
         logging._startTime = time.time() # reset relative time
 
         # fh

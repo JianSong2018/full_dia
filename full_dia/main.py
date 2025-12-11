@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+from pathlib import Path
+
 from full_dia import utils
 from full_dia import cross
 from full_dia.log import Logger
@@ -14,14 +16,41 @@ except:
 
 logger = Logger.get_logger()
 
+def bootstrap(args):
+    # create out folder
+    out_dir = (Path(args.ws) / args.out_name)
+    out_dir.mkdir(exist_ok=True)
+    # init log
+    Logger.set_logger(out_dir)
+    # print info
+    utils.print_run_info(args)
+    # init cfg
+    cfg.load_default()
+    cfg.update_from_yaml(args.cfg_develop)
+    # init ws
+    utils.init_multi_ws(Path(args.ws), args.out_name)
+    # init gpu
+    utils.init_gpu_params(args.gpu_id)
+    # others
+    cfg.is_compare_mode = args.compare
+    cfg.is_overwrite = args.overwrite
+    if args.low_memory:
+        cfg.target_batch_max = cfg.target_batch_max / 2.
+
+    # check
+    if cfg.file_num < 2:
+        info = ('Full-DIA needs >= 2 runs to complete the analysis!')
+        logger.warning(info)
+
+
 @profile
 def main():
-    # init ws, lib, out_name
-    ws_global, dir_lib, out_name = utils.get_args()
-    utils.init_multi_ws(ws_global, out_name)
+    # init
+    args = utils.get_args()
+    bootstrap(args)
 
     # lib
-    lib = Library(dir_lib)
+    lib = Library(args.lib)
 
     # search
     search_core(lib)

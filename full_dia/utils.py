@@ -329,11 +329,6 @@ def convert_cols_to_diann(df, ws_single):
 
 
 def get_args():
-    name = f"Full-DIA {__version__}"
-    print(' ' * 9, "*" * (len(name) + 4))
-    print(' ' * 9, f"* {name} *")
-    print(' ' * 9, "*" * (len(name) + 4))
-
     parser = argparse.ArgumentParser('full_dia')
 
     # required=True
@@ -376,14 +371,7 @@ def get_args():
 
     # process params
     args = parser.parse_args()
-    cfg.update_from_yaml(args.cfg_user)
-    init_gpu_params(args.gpu_id)
-    cfg.is_compare_mode = args.compare
-    cfg.is_overwrite = args.overwrite
-    if args.low_memory:
-        cfg.target_batch_max = cfg.target_batch_max / 2.
-
-    return Path(args.ws), Path(args.lib), args.out_name
+    return args
 
 
 def init_gpu_params(gpu_id):
@@ -409,14 +397,7 @@ def init_gpu_params(gpu_id):
         cfg.batch_deep_big = 2000
 
 
-def init_multi_ws(ws_global, out_name):
-    # output for global
-    cfg.ws_global = ws_global
-    cfg.dir_out_name = out_name
-    cfg.dir_out_global = (ws_global / out_name)
-    cfg.dir_out_global.mkdir(exist_ok=True)
-    Logger.set_logger(cfg.dir_out_global, is_time_name=cfg.is_time_log)
-
+def print_run_info(args):
     # show version and platform
     import platform
     logger.info(f'Full-DIA (v{__version__}) on {platform.system()} OS')
@@ -432,15 +413,15 @@ def init_multi_ws(ws_global, out_name):
     logger.info(f'CPU: {cpu_num}cores, Frequency: {cpu_frq:.1f}GHz')
 
     # show memory
-    total = psutil.virtual_memory().total / 1024**3
-    free = psutil.virtual_memory().available / 1024**3
+    total = psutil.virtual_memory().total / 1024 ** 3
+    free = psutil.virtual_memory().available / 1024 ** 3
     logger.info(f'RAM: {free:.0f}G/{total:.0f}G in free/total')
 
     # show GPU
-    i = cfg.gpu_id
+    i = args.gpu_id
     gpu_name = torch.cuda.get_device_name(i)
     free, total = cuda.current_context().get_memory_info()
-    free, total = free / 1024**3, total / 1024**3
+    free, total = free / 1024 ** 3, total / 1024 ** 3
     logger.info(f'GPU: {gpu_name}-{i}, {free:.0f}G/{total:.0f}G in free/total')
     if free < 10:
         logger.warning('GPU memory is less than 10G. Full-DIA may crash!')
@@ -448,6 +429,14 @@ def init_multi_ws(ws_global, out_name):
     # show cmd
     import sys
     logger.info(f'CMD: {" ".join(sys.argv)}')
+
+
+def init_multi_ws(ws_global, out_name):
+    # output for global
+    cfg.ws_global = ws_global
+    cfg.dir_out_name = out_name
+    cfg.dir_out_global = (ws_global / out_name)
+    cfg.dir_out_global.mkdir(exist_ok=True)
 
     multi_ws = []
     if ws_global.suffix == '.d':
@@ -459,14 +448,10 @@ def init_multi_ws(ws_global, out_name):
     cfg.multi_ws = multi_ws
     cfg.file_num = len(cfg.multi_ws)
 
-    info = 'The number of .d files contained in specified ws is less than 2!'
-    if cfg.file_num < 2:
-        logger.warning(info)
-
 
 def init_single_ws(ws_i, total, ws_single):
-    cfg.ws_single = ws_single
-    cfg.dir_out_single = (ws_single / cfg.dir_out_name)
+    cfg.ws_single = Path(ws_single)
+    cfg.dir_out_single = (Path(ws_single) / cfg.dir_out_name)
     if cfg.is_compare_mode:
         cfg.dir_out_global.mkdir(exist_ok=True)
 

@@ -1,6 +1,9 @@
 from pathlib import Path
 import yaml
 
+from full_dia.log import Logger
+logger = Logger.get_logger()
+
 params = {}
 
 def flatten_yaml(cfg_dict):
@@ -34,12 +37,15 @@ def update_from_yaml(yaml_path):
     with open(yaml_path, "r", encoding="utf-8") as f:
         raw = yaml.safe_load(f)
 
-    new_vals = flatten_yaml(raw)
-    params = {**params, **new_vals}
+    params_new = flatten_yaml(raw)
+
+    # log changed params
+    for k, v in params_new.items():
+        if k in params and params[k] != v:
+            info = 'param changed: {}, {} -> {}'.format(k, params[k], v)
+            logger.info(info)
+
+    params = {**params, **params_new}
 
     for k, v in params.items():
         globals()[k] = v
-
-
-load_default()
-

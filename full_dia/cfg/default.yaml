@@ -68,5 +68,4 @@ chemical:
 
 develop_use:
   is_compare_mode: False
-  is_time_log: False
   locus_valid_num: 3.5 # locuses from Full-DIA and DIA-NN within this value are considered consistent
