@@ -578,13 +578,13 @@ def select_main_other(df):
     return df_main, df_other
 
 
-def main_search(lib):
+def search_core(lib):
     df_second_v = []
     for ws_i, ws_single in enumerate(cfg.multi_ws):
         # ws_single
         init_single_ws(ws_i, cfg.file_num, ws_single)
         if (cfg.dir_out_global/(ws_single.name + '.parquet')).exists():
-            if (not cfg.is_overwrite) and (cfg.phase == 'First'):
+            if not cfg.is_overwrite:
                 continue
 
         ms = load_ms(ws_single)
@@ -707,17 +707,13 @@ def main_search(lib):
         # df_main = pd.read_pickle(cfg.dir_out_single / 'df_fdr2.pkl')
 
         # save first pass result
-        if cfg.phase == 'First':
-            logger.info('Saving run-specific result as parquet...')
-            utils.save_or_clean(df_main, df_other, ws_single, 'First')
-            logger.info('Saving finished.')
-        if cfg.phase == 'Second':
-            df = utils.save_or_clean(df, ws_single, 'Second')
-            df_second_v.append(df)
+        logger.info('Saving run-specific result as parquet...')
+        utils.save_or_clean(df_main, df_other, ws_single)
+        logger.info('Saving finished.')
 
         # release within loop
         del df_lib, df, ms
         cfg.tol_im_xic = cfg.tol_im_xic_before_calib
-        cfg.tol_ppm = 20.
+        cfg.tol_ppm = cfg.tol_ppm_before_calib
 
     return df_second_v

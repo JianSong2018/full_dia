@@ -193,11 +193,11 @@ def cal_acc_recall(path_ws, df_input,
 
 
 def save_as_pkl(df, fname):
-    if cfg.is_compare_mode and (cfg.phase == 'First'):
+    if cfg.is_compare_mode:
         df.to_pickle(cfg.dir_out_single / fname)
 
 
-def save_or_clean(df_main, df_other, ws_single, phase):
+def save_or_clean(df_main, df_other, ws_single):
     cols_base = ['pr_id', 'pr_charge', 'pr_index',
             'swath_id', 'decoy', 'locus',
             'measure_rt', 'measure_im'
@@ -217,11 +217,8 @@ def save_or_clean(df_main, df_other, ws_single, phase):
     cols_big = df.select_dtypes(include=[np.float64]).columns
     df[cols_big] = df[cols_big].astype(np.float32)
 
-    if phase == 'First':
-        output_file = cfg.dir_out_global / (ws_single.name + '.parquet')
-        df.to_parquet(output_file)
-    else:
-        return df
+    output_file = cfg.dir_out_global / (ws_single.name + '.parquet')
+    df.to_parquet(output_file)
 
 
 def save_lib(df):

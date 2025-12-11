@@ -9,9 +9,6 @@ placeholder:
   gpu_id: None
   is_overwrite: False
 
-workflow:
-  phase: 'First' # or 'Second'
-
 identification:
   fg_num: 12 # maximum number of fragment ions per target peptide
 
@@ -24,7 +21,8 @@ identification:
   tol_im_xic_before_calib: 0.08 # init tol 1/k0. For centroid data.
   tol_im_xic_after_calib: 0.05 # refined tol 1/k0
   tol_im_xic: 0.08
-  tol_ppm: 20  # init tol for centroid or profile data
+  tol_ppm_before_calib: 20  # init tol for centroid or profile data
+  tol_ppm: 20
 
   tol_im_map: 0.025 # half width of im for DeepMap
   map_im_gap: 0.001 # bin width in im dimension for DeepMap

@@ -4,7 +4,7 @@ from full_dia import cross
 from full_dia.log import Logger
 from full_dia.library import Library
 
-from full_dia.main_core import *
+from full_dia.search import *
 
 try:
     # profile
@@ -24,8 +24,7 @@ def main():
     lib = Library(dir_lib)
 
     # search
-    cfg.phase = 'First'
-    main_search(lib)
+    search_core(lib)
 
     # global
     logger.info(f'=================Global Analysis=================')
@@ -36,26 +35,6 @@ def main():
     cross.save_report_result(df_global1, multi_ws=cfg.multi_ws)
     logger.info('Finished.')
     return
-
-    # if reanalysis
-    utils.save_lib(df_global1)
-
-    # modify lib
-    lib.polish_lib_by_idx(df_global1['pr_index'])
-
-    # search
-    cfg.phase = 'Second'
-    df_v = main_search(lib)
-
-    # second global
-    logger.info(f'=================Second Global Analysis=================')
-    df_global = cross.cal_global(
-        lib, cfg.top_k_fg, cfg.top_k_pr, df_v=df_v, df_global1=df_global1
-    )
-    utils.print_external_global_fdr(df_global)
-    cross.save_report_result(df_global, df_v=df_v)
-
-    logger.info('Finished.')
 
 
 if __name__ == '__main__':
