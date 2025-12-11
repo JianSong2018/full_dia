@@ -2,6 +2,7 @@ import argparse
 import warnings
 from pathlib import Path
 
+import yaml
 from sklearn.exceptions import ConvergenceWarning
 
 warnings.filterwarnings(action='ignore', category=ConvergenceWarning)
@@ -362,7 +363,12 @@ def get_args():
         '-overwrite', action='store_true',
         help='Specify whether overwrite the existing run-specific analysed files. Default: False'
     )
+
     # develop
+    parser.add_argument(
+        '-cfg_develop', type=str, default=None,
+        help='Developing use. Specify the developing cfg .yaml path'
+    )
     parser.add_argument(
         '-compare', action='store_true',
         help='Developing use. Default: False'
@@ -370,6 +376,7 @@ def get_args():
 
     # process params
     args = parser.parse_args()
+    cfg.update_from_yaml(args.cfg_user)
     init_gpu_params(args.gpu_id)
     cfg.is_compare_mode = args.compare
     cfg.is_overwrite = args.overwrite
