@@ -16,7 +16,7 @@ warnings.filterwarnings(action='ignore', category=UserWarning)
 warnings.filterwarnings(action='ignore', category=ConvergenceWarning)
 
 from full_dia import utils
-from full_dia import param_g
+from full_dia import cfg
 from full_dia.log import Logger
 
 try:
@@ -75,9 +75,9 @@ def adjust_rubbish_q(df, batch_num):
              (df['group_rank'] == 1)].pr_id.nunique()
     ids = ids * batch_num
     if ids < 5000:
-        param_g.rubbish_q_cut = 0.75
+        cfg.rubbish_q_cut = 0.75
     else:
-        param_g.rubbish_q_cut = param_g.rubbish_q_cut
+        cfg.rubbish_q_cut = cfg.rubbish_q_cut
 
 
 def cal_q_pr_core(df, run_or_global):

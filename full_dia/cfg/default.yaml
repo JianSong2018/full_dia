@@ -1,57 +1,46 @@
-develop_use:
-  is_compare_mode: False
-  is_time_log: False
-
-phase: 'First' # or 'Second'
-
 placeholder:
   dir_out_global: None
   dir_out_single: None
   dir_out_name: None
   multi_ws: None
   file_num: None
-  tol_rt: None # second
-  locus_rt_thre: None # second
+  tol_rt: None
+  locus_rt_thre: None
   gpu_id: None
   is_overwrite: False
 
-# tol_rt is related to the length of gradient
-tol_rt_ratio: 0.0667 # 1/15
-sample_ratio: 0.1 # sample for calculate tolerances
-# locuses from Full-DIA and DIA-NN within this value are considered consistent
-locus_valid_num: 3.5
-# seek locus
-top_sa_cut: 0.75
-top_deep_cut: 0.66
-# batch size max for targets; when low memory mode, it's 250000
-target_batch_max: 450000
-# batch q cut
-rubbish_q_cut: 0.5
+workflow:
+  phase: 'First' # or 'Second'
 
-# widely used
-fg_num: 12
-tol_ppm: 20  # boin in centroid or profile data
-tol_im_xic_before_calib: 0.08 # 1/k0. For centroid data.
-tol_im_xic_after_calib: 0.05
-tol_im_xic: 0.08
+identification:
+  fg_num: 12 # maximum number of fragment ions per target peptide
 
-# deepmap
-tol_im_map: 0.025 # half width of im for DeepMap
+  sample_ratio: 0.1 # estimate the tol by sampling from lib
+  rubbish_q_cut: 0.5 # q threshold from DIA-NN source code
+  top_sa_cut: 0.75 # candidate locus must have SA > ratio of the maximum
+  top_deep_cut: 0.66 # candidate locus must have Deep > ratio of the maximum
 
-# The mobility span ≈ 0.01-0.02, gap-0.0001 guarantees 10 sampling points.
-# Maximum in a bin. Also, a push is 0.001(1/1000)
-map_im_gap: 0.001 # bin width in im dimension for DeepMap
-map_im_dim: 50 # int(2 * tol_im_map / map_im_gap)
-map_cycle_dim: 13 # locus with 13 cycles
-window_points: 7 # SA only using 7 cycles.
+  tol_rt_ratio: 0.0667 # 1/15 of the gradient as the init tol_rt
+  tol_im_xic_before_calib: 0.08 # init tol 1/k0. For centroid data.
+  tol_im_xic_after_calib: 0.05 # refined tol 1/k0
+  tol_im_xic: 0.08
+  tol_ppm: 20  # init tol for centroid or profile data
 
-# deepmap retrain or deepmall train
-patient: 5
+  tol_im_map: 0.025 # half width of im for DeepMap
+  map_im_gap: 0.001 # bin width in im dimension for DeepMap
+  map_im_dim: 50 # int(2 * tol_im_map / map_im_gap)
+  map_cycle_dim: 13 # locus with 13 cycles
+  patient: 5 # epoch stop for deepmap retrain or deepmall train
 
-# global
-top_k_fg: 5 # select top_k_fg ions for cross quantification of precursors
-top_k_pr: 1 # select top_k_pr prs for protein quantification
-q_cut_infer: None # which prs will be used for protein group infer and score
+  window_points: 7 # SA only using 7 cycles.
+  q_cut_infer: None # which prs will be used for protein group infer and score
+
+quantification:
+  top_k_fg: 5 # select top_k_fg ions for cross quantification of precursors
+  top_k_pr: 1 # select top_k_pr prs for protein quantification
+
+efficiency:
+  target_batch_max: 450000 # batch size for analysis
 
 chemical:
   mass_proton: 1
@@ -78,3 +67,8 @@ chemical:
     W: 204.0898783828
     Y: 181.07389435090005
     c: 178.04121404900002
+
+develop_use:
+  is_compare_mode: False
+  is_time_log: False
+  locus_valid_num: 3.5 # locuses from Full-DIA and DIA-NN within this value are considered consistent

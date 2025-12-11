@@ -9,7 +9,7 @@ from matplotlib import MatplotlibDeprecationWarning
 from scipy.interpolate import interp1d
 from scipy.stats import gaussian_kde
 
-from full_dia import param_g
+from full_dia import cfg
 from full_dia import utils
 from full_dia.log import Logger
 
@@ -47,8 +47,8 @@ def update_info_rt(df_seed, df_lib):
     idx = np.argsort(x)
     x0 = x[idx]
     y0 = y[idx]
-    if param_g.is_compare_mode:
-        np.savez(param_g.dir_out_single / 'update_rt.npz', x=x, y=y)
+    if cfg.is_compare_mode:
+        np.savez(cfg.dir_out_single / 'update_rt.npz', x=x, y=y)
 
     # Calib-RT
     x1, y1, _ = screen_by_hist(x0, y0, bins=100)
@@ -70,10 +70,10 @@ def update_info_rt(df_seed, df_lib):
 
     # tol is for df_seed, tol_rt is for global extraction
     tol_turn = cal_turning_point(y0, f(x0))
-    tol_ratio = param_g.tol_rt
-    param_g.tol_rt = max(tol_ratio, tol_turn)
+    tol_ratio = cfg.tol_rt
+    cfg.tol_rt = max(tol_ratio, tol_turn)
     info = 'tol_rt, by ratio: {:.2f}, by seed: {:.2f}, pre-select: {:.2f}'.format(
-        tol_ratio, tol_turn, param_g.tol_rt
+        tol_ratio, tol_turn, cfg.tol_rt
     )
     logger.info(info)
 
@@ -89,7 +89,7 @@ def update_info_rt(df_seed, df_lib):
 
     info = 'Calib RT/IM/MZ by #seed: {}'.format(len(df))
     logger.info(info)
-    utils.cal_acc_recall(param_g.ws_single, df, diann_q_pr=0.01)
+    utils.cal_acc_recall(cfg.ws_single, df, diann_q_pr=0.01)
 
     # pred for df_lib
     x_new = df_lib['pred_irt'].values
@@ -97,16 +97,16 @@ def update_info_rt(df_seed, df_lib):
     y_new[y_new < 0.] = 0.
     df_lib['pred_rt'] = y_new
 
-    if param_g.is_compare_mode:
+    if cfg.is_compare_mode:
         plot_fit_rt(x, y,
                     x1, y1,
                     x11, y11,
                     x_fit, y_fit,
-                    param_g.tol_rt,
+                    cfg.tol_rt,
                     bias,
                     fname='update_info_rt')
 
-    cal_rt_recall(param_g.ws_single, df_lib, param_g.tol_rt)
+    cal_rt_recall(cfg.ws_single, df_lib, cfg.tol_rt)
 
     return df, df_lib
 
@@ -121,8 +121,8 @@ def update_info_im(df_tol, df_lib):
     Returns:
         df_lib
     '''
-    cal_im_recall(param_g.ws_single, df_lib, param_g.tol_im_xic)
-    cal_rt_im_recall(param_g.ws_single, df_lib, param_g.tol_rt, param_g.tol_im_xic)
+    cal_im_recall(cfg.ws_single, df_lib, cfg.tol_im_xic)
+    cal_rt_im_recall(cfg.ws_single, df_lib, cfg.tol_rt, cfg.tol_im_xic)
 
     idx_max = df_tol.groupby('pred_iim')['score_deep'].idxmax()
     df_tol = df_tol.loc[idx_max].reset_index(drop=True)
@@ -156,8 +156,8 @@ def update_info_im(df_tol, df_lib):
     y_pred_after = f(x_good)
     bias_after = y_measure_good - y_pred_after
 
-    # param_g.tol_im = np.abs(bias_after).max()
-    # info = 'updated tol_im: {:.4f}'.format(param_g.tol_im)
+    # cfg.tol_im = np.abs(bias_after).max()
+    # info = 'updated tol_im: {:.4f}'.format(cfg.tol_im)
     # logger.info(info)
     # logger.info('Keep tol_im: 0.05')
 
@@ -166,23 +166,23 @@ def update_info_im(df_tol, df_lib):
     df_tol['pred_im'] = pred_ims
 
     df_tol['bias_im'] = (df_tol['pred_im'] - df_tol['measure_im']).abs()
-    df_tol = df_tol[df_tol['bias_im'] < param_g.tol_im_xic]
+    df_tol = df_tol[df_tol['bias_im'] < cfg.tol_im_xic]
     df_tol = df_tol.reset_index(drop=True)
 
     # pred for df_lib
     pred_ims = f(df_lib['pred_iim'].values).astype(np.float32)
     df_lib['pred_im'] = pred_ims
 
-    if param_g.is_compare_mode:
+    if cfg.is_compare_mode:
         plot_fit_im(y_measure_good,
                     y_pred_before, y_pred_after,
                     x_fit, y_fit,
                     bias_before, bias_after,
                     fname='update_info_im')
 
-    param_g.tol_im_xic = param_g.tol_im_xic_after_calib
-    cal_im_recall(param_g.ws_single, df_lib, param_g.tol_im_xic)
-    cal_rt_im_recall(param_g.ws_single, df_lib, param_g.tol_rt, param_g.tol_im_xic)
+    cfg.tol_im_xic = cfg.tol_im_xic_after_calib
+    cal_im_recall(cfg.ws_single, df_lib, cfg.tol_im_xic)
+    cal_rt_im_recall(cfg.ws_single, df_lib, cfg.tol_rt, cfg.tol_im_xic)
 
     return df_tol, df_lib
 
@@ -227,12 +227,12 @@ def update_info_mz(df_seed, ms):
     bias_after = bias[good_idx]
 
     # update tol_ppm
-    # param_g.tol_ppm = np.abs(bias_after).max()
-    # info = 'updated tol_ppm: {:.2f}'.format(param_g.tol_ppm)
+    # cfg.tol_ppm = np.abs(bias_after).max()
+    # info = 'updated tol_ppm: {:.2f}'.format(cfg.tol_ppm)
     # logger.info(info)
     # logger.info('Keep tol_ppm: 20')
 
-    if param_g.is_compare_mode:
+    if cfg.is_compare_mode:
         plot_fit_mz(x_good, y_good,
                     y_pred, y_good,
                     x_fit, y_fit,
@@ -416,7 +416,7 @@ def plot_fit_rt(x, y, x1, y1, x11, y11, x_fit, y_fit,
     for a in ax:
         a.legend()
     plt.tight_layout()
-    plt.savefig(param_g.dir_out_single / (fname + '.png'), bbox_inches='tight')
+    plt.savefig(cfg.dir_out_single / (fname + '.png'), bbox_inches='tight')
 
 
 def plot_fit_im(y_measure, y_pred_before, y_pred_after,
@@ -462,7 +462,7 @@ def plot_fit_im(y_measure, y_pred_before, y_pred_after,
 
     # plt.legend()
     plt.tight_layout()
-    plt.savefig(param_g.dir_out_single / (fname + '.png'), bbox_inches='tight')
+    plt.savefig(cfg.dir_out_single / (fname + '.png'), bbox_inches='tight')
 
 
 def plot_fit_mz(x1, y1, x2, y2, x_fit, y_fit, bias_old, bias, fname):
@@ -504,11 +504,11 @@ def plot_fit_mz(x1, y1, x2, y2, x_fit, y_fit, bias_old, bias, fname):
 
     # plt.legend()
     plt.tight_layout()
-    plt.savefig(param_g.dir_out_single / (fname + '.png'), bbox_inches='tight')
+    plt.savefig(cfg.dir_out_single / (fname + '.png'), bbox_inches='tight')
 
 
 def cal_rt_recall(ws, df_lib, tol_rt):
-    if not param_g.is_compare_mode:
+    if not cfg.is_compare_mode:
         return
     df_diann = pd.read_csv(ws / 'diann' / 'report.tsv', sep='\t')
     df_diann = df_diann[df_diann['Q.Value'] < 0.01]
@@ -530,7 +530,7 @@ def cal_rt_recall(ws, df_lib, tol_rt):
 
 
 def cal_im_recall(ws, df_lib, tol_im):
-    if not param_g.is_compare_mode:
+    if not cfg.is_compare_mode:
         return
     df_diann = pd.read_csv(ws / 'diann' / 'report.tsv', sep='\t')
     df_diann = df_diann[df_diann['Q.Value'] < 0.01]
@@ -552,7 +552,7 @@ def cal_im_recall(ws, df_lib, tol_im):
 
 
 def cal_rt_im_recall(ws, df_lib, tol_rt, tol_im):
-    if not param_g.is_compare_mode:
+    if not cfg.is_compare_mode:
         return
     df_diann = pd.read_csv(ws / 'diann' / 'report.tsv', sep='\t')
     df_diann = df_diann[df_diann['Q.Value'] < 0.01]

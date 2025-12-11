@@ -8,7 +8,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
-from full_dia import param_g
+from full_dia import cfg
 from full_dia import utils
 from full_dia.log import Logger
 from full_dia import fdr
@@ -150,7 +150,7 @@ def cal_global(lib, top_k_fg, top_k_pr, multi_ws=[], df_v=[], df_global1=None):
             ids_001_v.append(ids_001)
         q_cut = q_cut_v[np.argmax(ids_001_v)]
         logger.info(f'Select q_cut: {q_cut:.2f} for pg inference and score')
-        param_g.q_cut_infer = q_cut
+        cfg.q_cut_infer = q_cut
 
         df_global = df_global[df_global['q_pr_global'] < q_cut].reset_index(drop=True)
         df_global2 = df_global.copy()
@@ -169,13 +169,13 @@ def cal_global(lib, top_k_fg, top_k_pr, multi_ws=[], df_v=[], df_global1=None):
     utils.print_ids(df_global, 0.05, pr_or_pg='pg', run_or_global='global')
 
     # load fg_mz for main eat other
-    cols_fg_mz = ['fg_mz_' + str(i) for i in range(param_g.fg_num)]
+    cols_fg_mz = ['fg_mz_' + str(i) for i in range(cfg.fg_num)]
     df_global = lib.assign_fg_mz(df_global)
 
     # load quant info
     cols_run = ['swath_id', 'locus', 'measure_im']
-    cols_sa = ['score_ion_sa_' + str(i) for i in range(0, param_g.fg_num + 2)]
-    cols_quant = ['score_ion_quant_' + str(i) for i in range(0, param_g.fg_num + 2)]
+    cols_sa = ['score_ion_sa_' + str(i) for i in range(0, cfg.fg_num + 2)]
+    cols_quant = ['score_ion_quant_' + str(i) for i in range(0, cfg.fg_num + 2)]
     for ws_i in range(n_run):
         if len(multi_ws) > 0:
             df = utils.read_from_pq(
@@ -243,7 +243,7 @@ def quant_pr_autoencoder(df_global, top_k_fg, is_log_correct=False):
     ) + 1
 
     sa_m_v, area_m_v, pr_quant_m = [], [], []
-    ion_idx = range(2, 2 + param_g.fg_num) # only considering MS2 signal
+    ion_idx = range(2, 2 + cfg.fg_num) # only considering MS2 signal
     for wi in range(n_run):
         cols_sa = ['run_' + str(wi) + '_' + 'score_ion_sa_' + str(i) for i in ion_idx]
         sa_m = df_global.loc[:, cols_sa].values
@@ -275,10 +275,10 @@ def quant_pr_autoencoder(df_global, top_k_fg, is_log_correct=False):
     W_cscore = cscores_pr[train_val_idx]
 
     # pytorch
-    X_area1 = torch.tensor(area_m_norm1).to(param_g.gpu_id)
-    X_area2 = torch.tensor(area_m_norm2).to(param_g.gpu_id)
-    X_sa = torch.tensor(sa_m).to(param_g.gpu_id)
-    W_cscore = torch.tensor(W_cscore).to(param_g.gpu_id)
+    X_area1 = torch.tensor(area_m_norm1).to(cfg.gpu_id)
+    X_area2 = torch.tensor(area_m_norm2).to(cfg.gpu_id)
+    X_sa = torch.tensor(sa_m).to(cfg.gpu_id)
+    W_cscore = torch.tensor(W_cscore).to(cfg.gpu_id)
 
     X_area1_train_val = X_area1[train_val_idx]
     X_area2_train_val = X_area2[train_val_idx]
@@ -302,7 +302,7 @@ def quant_pr_autoencoder(df_global, top_k_fg, is_log_correct=False):
     val_loader = DataLoader(val_set, batch_size=256)
     pred_loader = DataLoader(dataset_pred, batch_size=1024, shuffle=False)
 
-    model = DeepQuant(n_run, n_ion).to(param_g.gpu_id)
+    model = DeepQuant(n_run, n_ion).to(cfg.gpu_id)
     optimizer = optim.Adam(model.parameters(), lr=0.001)
     criterion = nn.MSELoss(reduction='none')
 
@@ -420,7 +420,7 @@ def save_report_result(df_global, multi_ws=[], df_v=[]):
 
         # cal q_pg_run based on assigned protein_groups
         df['cscore_pr_run'].fillna(0, inplace=True)
-        df = fdr.cal_q_pg(df, param_g.q_cut_infer, 'run')
+        df = fdr.cal_q_pg(df, cfg.q_cut_infer, 'run')
 
         # dtype
         df['pr_charge'] = df['pr_id'].str[-1].astype(np.int8)
@@ -429,7 +429,7 @@ def save_report_result(df_global, multi_ws=[], df_v=[]):
         df[cols_big] = df[cols_big].astype(np.float32)
 
         # convert
-        df = utils.convert_cols_to_diann(df, param_g.multi_ws[ws_i])
+        df = utils.convert_cols_to_diann(df, cfg.multi_ws[ws_i])
         df_out_v.append(df)
     df = pd.concat(df_out_v, ignore_index=True)
-    df.to_parquet(param_g.dir_out_global / oname)
+    df.to_parquet(cfg.dir_out_global / oname)

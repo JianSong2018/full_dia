@@ -6,7 +6,7 @@ from numba import cuda, jit
 from full_dia import deepmall
 from full_dia import deepmap
 from full_dia import fxic
-from full_dia import param_g
+from full_dia import cfg
 from full_dia import utils
 from full_dia.log import Logger
 
@@ -33,7 +33,7 @@ def score_locus(df_target, ms, model_center, model_big):
         ms1_profile, ms2_profile = ms.copy_map_to_gpu(swath_id, centroid=False)
         ms1_centroid, ms2_centroid = ms.copy_map_to_gpu(swath_id, centroid=True)
 
-        batch_n = param_g.batch_deep_big
+        batch_n = cfg.batch_deep_big
 
         # may split two locus that belong to a pr
         for batch_idx, df_batch in df_swath.groupby(df_swath.index // batch_n):
@@ -45,17 +45,17 @@ def score_locus(df_target, ms, model_center, model_big):
                     df_batch,
                     ms1_profile,
                     ms2_profile,
-                    param_g.map_cycle_dim,
-                    param_g.map_im_gap, param_g.map_im_dim,
-                    param_g.tol_ppm,
-                    param_g.tol_im_map,
+                    cfg.map_cycle_dim,
+                    cfg.map_im_gap, cfg.map_im_dim,
+                    cfg.tol_ppm,
+                    cfg.tol_im_map,
                 )
             _, rts, ims_v, mzs_v, xics_v = fxic.extract_xics(
                     df_batch,
                     ms1_centroid,
                     ms2_centroid,
-                    param_g.tol_ppm,
-                    param_g.tol_im_xic,
+                    cfg.tol_ppm,
+                    cfg.tol_im_xic,
                     cycle_num=13,
                     scope='big',
                 )
@@ -63,8 +63,8 @@ def score_locus(df_target, ms, model_center, model_big):
                 df_batch,
                 ms1_centroid,
                 ms2_centroid,
-                param_g.tol_ppm * 0.5,
-                param_g.tol_im_xic,
+                cfg.tol_ppm * 0.5,
+                cfg.tol_im_xic,
                 cycle_num=13,
                 only_xic=True
             )
@@ -72,8 +72,8 @@ def score_locus(df_target, ms, model_center, model_big):
                 df_batch,
                 ms1_centroid,
                 ms2_centroid,
-                param_g.tol_ppm * 0.25,
-                param_g.tol_im_xic,
+                cfg.tol_ppm * 0.25,
+                cfg.tol_im_xic,
                 cycle_num=13,
                 only_xic=True
             )
@@ -159,7 +159,7 @@ def scoring_other_elution(df_batch, xics, x):
     xics = cuda.as_cuda_array(xics)
     xics = fxic.gpu_simple_smooth(xics)
     coelutions, elutions = fxic.cal_coelution_by_gaussion(
-        xics, param_g.window_points, 2 + fg_num
+        xics, cfg.window_points, 2 + fg_num
     )
 
     center_idx = int(xics.shape[-1] / 2)
@@ -208,7 +208,7 @@ def scoring_main_elution(df_batch, xics, x):
     xics = cuda.as_cuda_array(xics)
     xics = fxic.gpu_simple_smooth(xics)
     coelutions, elutions = fxic.cal_coelution_by_gaussion(
-        xics, param_g.window_points, 2 + fg_num
+        xics, cfg.window_points, 2 + fg_num
     )
 
     center_idx = int(xics.shape[-1] / 2)
@@ -239,7 +239,7 @@ def scoring_main_elution(df_batch, xics, x):
 
     # sum of top1/2/3 b ions
     if x.find('p') == -1: # ppm-10/5 are not available
-        cols_anno = ['fg_anno_' + str(i) for i in range(param_g.fg_num)]
+        cols_anno = ['fg_anno_' + str(i) for i in range(cfg.fg_num)]
         fg_anno = df_batch[cols_anno].values
         fg_type = fg_anno // 1000
         fg_elutions[fg_type != 1] = 0  # non-b series set to 0
@@ -263,7 +263,7 @@ def scoring_xic_intensity(df_batch, xics, rts):
     elutions = df_batch[cols].values + 1e-7
 
     # boundary
-    sa_m = torch.from_numpy(elutions).to(param_g.gpu_id)
+    sa_m = torch.from_numpy(elutions).to(cfg.gpu_id)
     locus_start_v, locus_end_v = fxic.estimate_xic_boundary(xics, sa_m)
     locus_start_v = locus_start_v.astype(np.int8)
     locus_end_v = locus_end_v.astype(np.int8)
@@ -413,7 +413,7 @@ def scoring_center_im(df_batch, ims_input):
 
     # imbias for ions，missing value -- tol
     bias = np.abs(ims - df_batch['pred_im'].values[:, None])
-    bias[bias > param_g.tol_im_xic] = param_g.tol_im_xic
+    bias[bias > cfg.tol_im_xic] = cfg.tol_im_xic
 
     # 1. imbias for 14 ions
     m = bias.shape[-1]
@@ -460,11 +460,11 @@ def scoring_center_mz(df_batch, mzs_input):
 
     # ppm
     mzs_pr = df_batch['pr_mz'].values.reshape(-1, 1)
-    cols_center = ['fg_mz_' + str(i) for i in range(param_g.fg_num)]
+    cols_center = ['fg_mz_' + str(i) for i in range(cfg.fg_num)]
     mzs_fg = df_batch[cols_center].values
     mzs_pred = np.concatenate([mzs_pr, mzs_pr, mzs_fg], axis=1)
     ppm = 1e6 * np.abs(mzs_pred - mzs) / (mzs_pred + 1e-7)
-    ppm[ppm > param_g.tol_ppm] = param_g.tol_ppm
+    ppm[ppm > cfg.tol_ppm] = cfg.tol_ppm
 
     # 1. ppm for 14 ions
     m = ppm.shape[-1]
@@ -504,7 +504,7 @@ def scoring_meta(df):
     df['score_fg_num'] = df['fg_num'].astype(np.int8)
 
     # frag info：height
-    cols_height = ['fg_height_' + str(i) for i in range(1, param_g.fg_num)]
+    cols_height = ['fg_height_' + str(i) for i in range(1, cfg.fg_num)]
     height = df[cols_height].values  # [k, m]
     columns = ['score_lib_height_' + str(i) for i in range(height.shape[-1])]
     df[columns] = height
@@ -649,7 +649,7 @@ def update_scores(df, ms, model_center, model_big, model_mall):
         ms1_profile, ms2_profile = ms.copy_map_to_gpu(swath_id, centroid=False)
         ms1_centroid, ms2_centroid = ms.copy_map_to_gpu(swath_id, centroid=True)
 
-        batch_n = param_g.batch_deep_big
+        batch_n = cfg.batch_deep_big
 
         for batch_idx, df_batch in df_swath.groupby(df_swath.index // batch_n):
             df_batch = df_batch.reset_index(drop=True)
@@ -659,10 +659,10 @@ def update_scores(df, ms, model_center, model_big, model_mall):
                     df_batch,
                     ms1_profile,
                     ms2_profile,
-                    param_g.map_cycle_dim,
-                    param_g.map_im_gap, param_g.map_im_dim,
-                    param_g.tol_ppm,
-                    param_g.tol_im_map,
+                    cfg.map_cycle_dim,
+                    cfg.map_im_gap, cfg.map_im_dim,
+                    cfg.tol_ppm,
+                    cfg.tol_im_map,
                 )
             df_batch = scoring_by_deep(df_batch, scores_deep_v, x='refine')
             df_batch = scoring_by_cross(df_batch, is_update=True)
@@ -673,10 +673,10 @@ def update_scores(df, ms, model_center, model_big, model_mall):
                     df_batch,
                     ms1_profile,
                     ms2_profile,
-                    param_g.map_cycle_dim,
-                    param_g.map_im_gap, param_g.map_im_dim,
-                    param_g.tol_ppm * 0.5,
-                    param_g.tol_im_map,
+                    cfg.map_cycle_dim,
+                    cfg.map_im_gap, cfg.map_im_dim,
+                    cfg.tol_ppm * 0.5,
+                    cfg.tol_im_map,
                 )
             df_batch = scoring_by_deep(df_batch, scores_deep_v, x='refine_p1')
             df_batch = scoring_by_ft(df_batch, features_deep_v, x='refine_p1')
@@ -687,10 +687,10 @@ def update_scores(df, ms, model_center, model_big, model_mall):
                     df_batch,
                     ms1_profile,
                     ms2_profile,
-                    param_g.map_cycle_dim,
-                    param_g.map_im_gap, param_g.map_im_dim,
-                    param_g.tol_ppm * 0.25,
-                    param_g.tol_im_map,
+                    cfg.map_cycle_dim,
+                    cfg.map_im_gap, cfg.map_im_dim,
+                    cfg.tol_ppm * 0.25,
+                    cfg.tol_im_map,
                 )
             df_batch = scoring_by_deep(df_batch, scores_deep_v, x='refine_p2')
             df_batch = scoring_by_ft(df_batch, features_deep_v, x='refine_p2')
@@ -701,8 +701,8 @@ def update_scores(df, ms, model_center, model_big, model_mall):
                 df_batch,
                 ms1_centroid,
                 ms2_centroid,
-                param_g.tol_im_xic,
-                param_g.tol_ppm,
+                cfg.tol_im_xic,
+                cfg.tol_ppm,
             )
             df_batch['score_mall'] = scores_mall
 
@@ -717,6 +717,6 @@ def update_scores(df, ms, model_center, model_big, model_mall):
         )
 
     df = pd.concat(df_good, axis=0, ignore_index=True)
-    utils.cal_acc_recall(param_g.ws_single, df[df['decoy'] == 0], diann_q_pr=0.01)
+    utils.cal_acc_recall(cfg.ws_single, df[df['decoy'] == 0], diann_q_pr=0.01)
 
     return df

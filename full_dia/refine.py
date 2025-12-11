@@ -9,7 +9,7 @@ from full_dia import deepmall
 from full_dia import deepmap
 from full_dia import fxic
 from full_dia import models
-from full_dia import param_g
+from full_dia import cfg
 from full_dia import utils
 from full_dia.log import Logger
 
@@ -51,12 +51,12 @@ def extract_map_by_compare(df_top, ms):
                 df_batch,
                 ms1_centroid,
                 ms2_centroid,
-                param_g.tol_ppm,
-                param_g.tol_im_xic,
+                cfg.tol_ppm,
+                cfg.tol_im_xic,
             )
             xics = fxic.gpu_simple_smooth(xics)
             scores_sa, scores_sa_m = fxic.cal_coelution_by_gaussion(
-                xics, param_g.window_points, df_batch.fg_num.values + 2
+                xics, cfg.window_points, df_batch.fg_num.values + 2
             )
             scores_sa_gpu = fxic.reserve_sa_maximum(scores_sa)
             _, idx = torch.topk(scores_sa_gpu,
@@ -118,7 +118,7 @@ def extract_map_by_compare(df_top, ms):
 
     # extract map
     cycle_total = len(ms1_profile['scan_rts'])
-    cycle_num = param_g.map_cycle_dim
+    cycle_num = cfg.map_cycle_dim
     idx_start_bank = locus_m - int((cycle_num - 1) / 2)
     idx_start_bank[idx_start_bank < 0] = 0
     idx_start_max = cycle_total - cycle_num
@@ -141,12 +141,12 @@ def extract_map_by_compare(df_top, ms):
                                         idx_start_m,
                                         locus_m.shape[1],
                                         cycle_num,
-                                        param_g.map_im_dim,
+                                        cfg.map_im_dim,
                                         ms1_profile,
                                         ms2_profile,
-                                        param_g.tol_ppm,
-                                        param_g.tol_im_map,
-                                        param_g.map_im_gap,
+                                        cfg.tol_ppm,
+                                        cfg.tol_im_map,
+                                        cfg.map_im_gap,
                                         neutron_num=100)  # big
             maps_big = maps_big.squeeze(dim=1).cpu().numpy()
             cols_idx = [1, 5] + list(range(20, 32))
@@ -157,8 +157,8 @@ def extract_map_by_compare(df_top, ms):
             mall = deepmall.extract_mall(df_batch,
                                          ms1_centroid,
                                          ms2_centroid,
-                                         param_g.tol_im_xic,
-                                         param_g.tol_ppm,
+                                         cfg.tol_im_xic,
+                                         cfg.tol_ppm,
                                          )
             mall_v.append(mall.cpu().numpy())
     utils.release_gpu_scans(ms1_profile, ms2_profile)
@@ -216,7 +216,7 @@ def my_collate(items):
 
 
 def eval_one_epoch(trainloader, model):
-    device = param_g.gpu_id
+    device = cfg.gpu_id
     model.eval()
     prob_v, label_v = [], []
 
@@ -248,7 +248,7 @@ def eval_one_epoch(trainloader, model):
 
 
 def train_one_epoch(trainloader, model, optimizer, loss_fn):
-    device = param_g.gpu_id
+    device = cfg.gpu_id
     model.train()
     epoch_loss = 0.
     for batch_idx, (batch_map, batch_map_len, batch_y) in enumerate(
@@ -334,7 +334,7 @@ def retrain_model_map(model_maps, maps, valid_nums, labels, maps_type, epochs):
             info_best = info
         else:
             patience_counter += 1
-        if patience_counter >= param_g.patient:
+        if patience_counter >= cfg.patient:
             info = info_best
             break
     logger.info(info)
@@ -362,7 +362,7 @@ def train_model_mall(malls, valid_num, labels, epochs):
 
     # model
     model = models.DeepMall(input_dim=mall_dim,
-                            feature_dim=32).to(param_g.gpu_id)
+                            feature_dim=32).to(cfg.gpu_id)
 
     # optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0005)
@@ -389,7 +389,7 @@ def train_model_mall(malls, valid_num, labels, epochs):
             )
         else:
             patient_counter += 1
-        if patient_counter >= param_g.patient:
+        if patient_counter >= cfg.patient:
             logger.info(info)
             break
 

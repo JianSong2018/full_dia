@@ -13,7 +13,7 @@ import pandas as pd
 import torch
 from numba import cuda, jit, prange
 
-from full_dia import param_g
+from full_dia import cfg
 from full_dia.log import Logger
 from full_dia import __version__
 
@@ -47,13 +47,13 @@ def convert_numba_to_tensor(x):
 
 
 def create_cuda_zeros(shape, dtype=torch.float32):
-    x = torch.zeros(shape, dtype=dtype, device=param_g.gpu_id)
+    x = torch.zeros(shape, dtype=dtype, device=cfg.gpu_id)
     x = cuda.as_cuda_array(x)
     return x
 
 
 def get_diann_info(path_ws):
-    if not param_g.is_compare_mode:
+    if not cfg.is_compare_mode:
         return
 
     df_diann = pd.read_csv(path_ws / 'diann' / 'report.tsv', sep='\t')
@@ -102,7 +102,7 @@ def get_diann_info(path_ws):
 def cal_acc_recall(path_ws, df_input,
                    diann_q_pr=None, diann_q_pro=None, diann_q_pg=None,
                    alpha_q_pr=None, alpha_q_pro=None, alpha_q_pg=None):
-    if not param_g.is_compare_mode:
+    if not cfg.is_compare_mode:
         return
     df_alpha = df_input.copy()
 
@@ -129,7 +129,7 @@ def cal_acc_recall(path_ws, df_input,
     df_cross_pr = df_alpha_pr[['pr_id', 'measure_rt']]
     df_cross_pr = df_cross_pr.merge(df_diann_pr, on='pr_id')
     rt_delta = (df_cross_pr.measure_rt - df_cross_pr.RT * 60.).abs()
-    df_cross_pr = df_cross_pr[rt_delta < param_g.locus_rt_thre]
+    df_cross_pr = df_cross_pr[rt_delta < cfg.locus_rt_thre]
     pr_cross_pr = set(df_cross_pr.pr_id)
 
     # recall and acc on pr level
@@ -193,8 +193,8 @@ def cal_acc_recall(path_ws, df_input,
 
 
 def save_as_pkl(df, fname):
-    if param_g.is_compare_mode and (param_g.phase == 'First'):
-        df.to_pickle(param_g.dir_out_single / fname)
+    if cfg.is_compare_mode and (cfg.phase == 'First'):
+        df.to_pickle(cfg.dir_out_single / fname)
 
 
 def save_or_clean(df_main, df_other, ws_single, phase):
@@ -218,19 +218,19 @@ def save_or_clean(df_main, df_other, ws_single, phase):
     df[cols_big] = df[cols_big].astype(np.float32)
 
     if phase == 'First':
-        output_file = param_g.dir_out_global / (ws_single.name + '.parquet')
+        output_file = cfg.dir_out_global / (ws_single.name + '.parquet')
         df.to_parquet(output_file)
     else:
         return df
 
 
 def save_lib(df):
-    output_file = param_g.dir_out_global / 'report-lib.parquet'
+    output_file = cfg.dir_out_global / 'report-lib.parquet'
     df.to_parquet(output_file)
 
 
 def read_from_pq(ws_single, cols=None):
-    fname = param_g.dir_out_global / (ws_single.name + '.parquet')
+    fname = cfg.dir_out_global / (ws_single.name + '.parquet')
     if cols is None:
         df = pd.read_parquet(fname)
     else:
@@ -282,11 +282,11 @@ def convert_cols_to_diann(df, ws_single):
     df['file_name'] = '/'.join(ws_single.parts[-2:])
     df['run'] = ws_single.stem
 
-    cols_quant = ['score_ion_quant_' + str(i) for i in range(2+param_g.fg_num)]
+    cols_quant = ['score_ion_quant_' + str(i) for i in range(2+cfg.fg_num)]
     tmp = np.round(df[cols_quant].values, 2).astype(str)
     df['ion_quant'] = [';'.join(row) for row in tmp]
 
-    cols_sa = ['score_ion_sa_' + str(i) for i in range(2+param_g.fg_num)]
+    cols_sa = ['score_ion_sa_' + str(i) for i in range(2+cfg.fg_num)]
     tmp = np.round(df[cols_sa].values, 2).astype(str)
     df['ion_sa'] = [';'.join(row) for row in tmp]
 
@@ -374,10 +374,10 @@ def get_args():
     # process params
     args = parser.parse_args()
     init_gpu_params(args.gpu_id)
-    param_g.is_compare_mode = args.compare
-    param_g.is_overwrite = args.overwrite
+    cfg.is_compare_mode = args.compare
+    cfg.is_overwrite = args.overwrite
     if args.low_memory:
-        param_g.target_batch_max = 250000
+        cfg.target_batch_max = cfg.target_batch_max / 2.
 
     return Path(args.ws), Path(args.lib), args.out_name
 
@@ -385,33 +385,33 @@ def get_args():
 def init_gpu_params(gpu_id):
     torch.manual_seed(666)
 
-    param_g.gpu_id = torch.device('cuda:' + str(gpu_id))
-    param_g.device_name = torch.cuda.get_device_name(gpu_id)
+    cfg.gpu_id = torch.device('cuda:' + str(gpu_id))
+    cfg.device_name = torch.cuda.get_device_name(gpu_id)
     torch.backends.cudnn.benchmark = True
 
     from numba import cuda
     cuda.select_device(gpu_id)
 
     # xic extraction occupied the GPU memory ratio
-    if '4090' in param_g.device_name:
-        param_g.batch_xic_seed = 5000
-        param_g.batch_xic_locus = param_g.batch_xic_seed * 5
-        param_g.batch_deep_center = 10000
-        param_g.batch_deep_big = 5000
+    if '4090' in cfg.device_name:
+        cfg.batch_xic_seed = 5000
+        cfg.batch_xic_locus = cfg.batch_xic_seed * 5
+        cfg.batch_deep_center = 10000
+        cfg.batch_deep_big = 5000
     else:
-        param_g.batch_xic_seed = 4000
-        param_g.batch_xic_locus = param_g.batch_xic_seed * 5
-        param_g.batch_deep_center = 10000
-        param_g.batch_deep_big = 2000
+        cfg.batch_xic_seed = 4000
+        cfg.batch_xic_locus = cfg.batch_xic_seed * 5
+        cfg.batch_deep_center = 10000
+        cfg.batch_deep_big = 2000
 
 
 def init_multi_ws(ws_global, out_name):
     # output for global
-    param_g.ws_global = ws_global
-    param_g.dir_out_name = out_name
-    param_g.dir_out_global = (ws_global / out_name)
-    param_g.dir_out_global.mkdir(exist_ok=True)
-    Logger.set_logger(param_g.dir_out_global, is_time_name=param_g.is_time_log)
+    cfg.ws_global = ws_global
+    cfg.dir_out_name = out_name
+    cfg.dir_out_global = (ws_global / out_name)
+    cfg.dir_out_global.mkdir(exist_ok=True)
+    Logger.set_logger(cfg.dir_out_global, is_time_name=cfg.is_time_log)
 
     # show version and platform
     import platform
@@ -433,7 +433,7 @@ def init_multi_ws(ws_global, out_name):
     logger.info(f'RAM: {free:.0f}G/{total:.0f}G in free/total')
 
     # show GPU
-    i = param_g.gpu_id
+    i = cfg.gpu_id
     gpu_name = torch.cuda.get_device_name(i)
     free, total = cuda.current_context().get_memory_info()
     free, total = free / 1024**3, total / 1024**3
@@ -452,19 +452,19 @@ def init_multi_ws(ws_global, out_name):
         for ws_i in ws_global.rglob('*.d'):
             if ws_i.is_dir():
                 multi_ws.append(ws_i)
-    param_g.multi_ws = multi_ws
-    param_g.file_num = len(param_g.multi_ws)
+    cfg.multi_ws = multi_ws
+    cfg.file_num = len(cfg.multi_ws)
 
     info = 'The number of .d files contained in specified ws is less than 2!'
-    if param_g.file_num < 2:
+    if cfg.file_num < 2:
         logger.warning(info)
 
 
 def init_single_ws(ws_i, total, ws_single):
-    param_g.ws_single = ws_single
-    param_g.dir_out_single = (ws_single / param_g.dir_out_name)
-    if param_g.is_compare_mode:
-        param_g.dir_out_global.mkdir(exist_ok=True)
+    cfg.ws_single = ws_single
+    cfg.dir_out_single = (ws_single / cfg.dir_out_name)
+    if cfg.is_compare_mode:
+        cfg.dir_out_global.mkdir(exist_ok=True)
 
     logger.info(f'================Run: {ws_i+1}/{total}================')
     logger.info(f'.d: {str(ws_single.name)}')
@@ -500,7 +500,7 @@ def cal_kde(labels, choice_size=10000):
 
     # grid search for bandwidth
     grid = GridSearchCV(KernelDensity(kernel='gaussian'),
-                        param_grid={'bandwidth': bandwidths},
+                        cfgrid={'bandwidth': bandwidths},
                         cv=5,
                         n_jobs=1 if __debug__ else 8)
     grid.fit(labels_sample[:, None])
@@ -568,8 +568,8 @@ def print_ids(df, q_cut, pr_or_pg, run_or_global):
             df_sub = df[(df['q_pr_' + run_or_global] <= q_pr)]
             df_sub = df_sub[(df_sub['decoy'] == 0)]
             ids.append(df_sub.pr_id.nunique())
-            if param_g.is_compare_mode and (run_or_global == 'run'):
-                cal_acc_recall(param_g.ws_single, df_sub, diann_q_pr=0.01)
+            if cfg.is_compare_mode and (run_or_global == 'run'):
+                cal_acc_recall(cfg.ws_single, df_sub, diann_q_pr=0.01)
         id100 = (df['decoy'] == 0).sum()
         info = 'Ids-Precursor at {} FDR:     {}-0.01, {}-{:.2f}, {}-all'.format(
             run_or_global, ids[0], ids[1], q_cut, id100

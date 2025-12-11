@@ -3,7 +3,7 @@ import pandas as pd
 from numba import jit
 
 from full_dia.log import Logger
-from full_dia import param_g
+from full_dia import cfg
 from full_dia import utils
 
 logger = Logger.get_logger()
@@ -96,7 +96,7 @@ def polish_prs(df_input, tol_im=0.03, tol_ppm=20, tol_sa_ratio=0.75, tol_share_n
         measure_locus_v = df_target['locus'].values
         measure_im_v = df_target['measure_im'].values
 
-        cols_center = ['fg_mz_' + str(i) for i in range(param_g.fg_num)]
+        cols_center = ['fg_mz_' + str(i) for i in range(cfg.fg_num)]
         fg_mz_center = df_target[cols_center].values
         cols_center = ['score_ion_sa_' + str(i) for i in range(2, 14)]
         sa_center = df_target[cols_center].values
@@ -129,8 +129,8 @@ def polish_prs(df_input, tol_im=0.03, tol_ppm=20, tol_sa_ratio=0.75, tol_share_n
         df_v.append(df_target)
 
     df = pd.concat(df_v, ignore_index=True)
-    if param_g.is_compare_mode:
-        utils.cal_acc_recall(param_g.ws_single, df[df['decoy'] == 0], diann_q_pr=0.01)
+    if cfg.is_compare_mode:
+        utils.cal_acc_recall(cfg.ws_single, df[df['decoy'] == 0], diann_q_pr=0.01)
     return df
 
 
@@ -167,7 +167,7 @@ def polish_prs_in_reanalysis(df_input, tol_im, tol_ppm, tol_sa_ratio, tol_share_
     measure_locus_v = df_target['locus'].values
     measure_im_v = df_target['measure_im'].values
 
-    cols_center = ['fg_mz_' + str(i) for i in range(param_g.fg_num)]
+    cols_center = ['fg_mz_' + str(i) for i in range(cfg.fg_num)]
     fg_mz_center = df_target[cols_center].values
     cols_center = ['score_ion_sa_' + str(i) for i in range(2, 14)]
     sa_center = df_target[cols_center].values
@@ -200,8 +200,8 @@ def polish_prs_in_reanalysis(df_input, tol_im, tol_ppm, tol_sa_ratio, tol_share_
 
     df = pd.concat([df_target, df_other], ignore_index=True)
 
-    if param_g.is_compare_mode:
-        utils.cal_acc_recall(param_g.ws_single, df[df['decoy'] == 0], diann_q_pr=0.01)
+    if cfg.is_compare_mode:
+        utils.cal_acc_recall(cfg.ws_single, df[df['decoy'] == 0], diann_q_pr=0.01)
 
     return df, bad_seqs
 
@@ -257,7 +257,7 @@ def zero_interference_areas(df_input, tol_locus=3, tol_im=0.03, tol_ppm=20):
     measure_locus_v = df_target['locus'].values
     measure_im_v = df_target['measure_im'].values
 
-    cols_center = ['fg_mz_' + str(i) for i in range(param_g.fg_num)]
+    cols_center = ['fg_mz_' + str(i) for i in range(cfg.fg_num)]
     fg_mz_m = df_target[cols_center].values
     fg_mz_m = np.ascontiguousarray(fg_mz_m)
 

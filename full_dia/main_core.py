@@ -7,7 +7,7 @@ from numba.core.errors import NumbaPerformanceWarning
 
 from full_dia import deepmap
 from full_dia import fxic
-from full_dia import param_g
+from full_dia import cfg
 from full_dia import utils
 from full_dia.log import Logger
 from full_dia.decoy import make_decoys, cal_fg_mz_iso
@@ -63,7 +63,7 @@ def seek_seed(df_target, ms, model_center):
         # map_gpu
         ms1_profile, ms2_profile = ms.copy_map_to_gpu(swath_id, centroid=False)
         ms1_centroid, ms2_centroid = ms.copy_map_to_gpu(swath_id, centroid=True)
-        batch_n = param_g.batch_xic_seed
+        batch_n = cfg.batch_xic_seed
 
         # by coelution scores using sa func
         for batch_idx, df_batch in df_swath.groupby(df_swath.index // batch_n):
@@ -73,14 +73,14 @@ def seek_seed(df_target, ms, model_center):
                 df_batch,
                 ms1_centroid,
                 ms2_centroid,
-                param_g.tol_ppm,
-                param_g.tol_im_xic,
+                cfg.tol_ppm,
+                cfg.tol_im_xic,
                 rt_tolerance=None,
                 only_xic=True
             )
             xics = fxic.gpu_simple_smooth(xics)
             scores_sa, scores_sa_m = fxic.cal_coelution_by_gaussion(
-                xics, param_g.window_points, df_batch.fg_num.values + 2
+                xics, cfg.window_points, df_batch.fg_num.values + 2
             )
             del xics
 
@@ -97,8 +97,8 @@ def seek_seed(df_target, ms, model_center):
                 df_batch,
                 ms1_centroid,
                 ms2_centroid,
-                param_g.tol_ppm,
-                param_g.tol_im_xic,
+                cfg.tol_ppm,
+                cfg.tol_im_xic,
                 cycle_num=cycle_num,
                 only_xic=False
             )
@@ -113,10 +113,10 @@ def seek_seed(df_target, ms, model_center):
                 df_batch,
                 ms1_profile,
                 ms2_profile,
-                param_g.map_cycle_dim,
-                param_g.map_im_gap, param_g.map_im_dim,
-                param_g.tol_ppm,
-                param_g.tol_im_map,
+                cfg.map_cycle_dim,
+                cfg.map_im_gap, cfg.map_im_dim,
+                cfg.tol_ppm,
+                cfg.tol_im_map,
                 neutron_num=0,
                 return_feature=False
             )
@@ -134,11 +134,11 @@ def seek_seed(df_target, ms, model_center):
 
 
 def cal_recall_seek_seed(df_lib, ms, model_center):
-    if not param_g.is_compare_mode:
+    if not cfg.is_compare_mode:
         return
 
     # seek_seed is different with seek_locus
-    df_diann = pd.read_csv(param_g.ws_single / 'diann' / 'report.tsv', sep='\t')
+    df_diann = pd.read_csv(cfg.ws_single / 'diann' / 'report.tsv', sep='\t')
     df_diann = df_diann[df_diann['Q.Value'] < 0.01]
     df_diann['pr_id'] = df_diann['Modified.Sequence'] + df_diann[
         'Precursor.Charge'].astype(str)
@@ -167,7 +167,7 @@ def cal_recall_seek_seed(df_lib, ms, model_center):
         ms1_centroid, ms2_centroid = ms.copy_map_to_gpu(swath_id, centroid=True)
 
         all_rts = ms1_profile['scan_rts']
-        batch_n = param_g.batch_xic_seed
+        batch_n = cfg.batch_xic_seed
 
         # by coelution scores using sa func
         for batch_idx, df_batch in df_swath.groupby(df_swath.index // batch_n):
@@ -178,14 +178,14 @@ def cal_recall_seek_seed(df_lib, ms, model_center):
                 df_batch,
                 ms1_centroid,
                 ms2_centroid,
-                param_g.tol_ppm,
-                param_g.tol_im_xic,
+                cfg.tol_ppm,
+                cfg.tol_im_xic,
                 rt_tolerance=None,
             )
             # sa
             xics = fxic.gpu_simple_smooth(xics)
             sa_gausion, sa_gausion_m = fxic.cal_coelution_by_gaussion(
-                xics, param_g.window_points, ions_num
+                xics, cfg.window_points, ions_num
             )
             xic_dp = xics.shape[-1]
             del xics
@@ -210,10 +210,10 @@ def cal_recall_seek_seed(df_lib, ms, model_center):
                 df_batch,
                 ms1_profile,
                 ms2_profile,
-                param_g.map_cycle_dim,
-                param_g.map_im_gap, param_g.map_im_dim,
-                param_g.tol_ppm,
-                param_g.tol_im_map,
+                cfg.map_cycle_dim,
+                cfg.map_im_gap, cfg.map_im_dim,
+                cfg.tol_ppm,
+                cfg.tol_im_map,
                 neutron_num=0,
                 return_feature=False
             )
@@ -230,10 +230,10 @@ def cal_recall_seek_seed(df_lib, ms, model_center):
     df = pd.concat(df_good, axis=0, ignore_index=True)
     logger.info('data points num of xics: {}'.format(xic_dp))
 
-    df1 = df[df['bias_coelution'] < param_g.locus_rt_thre]
+    df1 = df[df['bias_coelution'] < cfg.locus_rt_thre]
     df1 = df1.reset_index(drop=True)
     logger.info('In seek_seed, Recall after top-1: ')
-    utils.cal_acc_recall(param_g.ws_single, df1, diann_q_pr=0.01)
+    utils.cal_acc_recall(cfg.ws_single, df1, diann_q_pr=0.01)
 
 
 @profile
@@ -263,7 +263,7 @@ def seek_locus(df_target, ms, model_center, top_sa_q, top_deep_q):
         ms1_profile, ms2_profile = ms.copy_map_to_gpu(swath_id, centroid=False)
         ms1_centroid, ms2_centroid = ms.copy_map_to_gpu(swath_id, centroid=True)
         all_rts = ms1_profile['scan_rts']
-        batch_n = param_g.batch_xic_locus
+        batch_n = cfg.batch_xic_locus
 
         # by coelution scores using sa func
         for batch_idx, df_batch in df_swath.groupby(df_swath.index // batch_n):
@@ -273,15 +273,15 @@ def seek_locus(df_target, ms, model_center, top_sa_q, top_deep_q):
                 df_batch,
                 ms1_centroid,
                 ms2_centroid,
-                param_g.tol_ppm,
-                param_g.tol_im_xic,
-                param_g.tol_rt,
+                cfg.tol_ppm,
+                cfg.tol_im_xic,
+                cfg.tol_rt,
                 only_xic=True
             )
             xics = fxic.gpu_simple_smooth(xics)
             scores_sa, scores_sa_m = fxic.cal_coelution_by_gaussion(
                 xics,
-                param_g.window_points,
+                cfg.window_points,
                 df_batch.fg_num.values + 2
             )
             scores_sa = fxic.screen_locus_by_sa(scores_sa, top_sa_q)
@@ -302,8 +302,8 @@ def seek_locus(df_target, ms, model_center, top_sa_q, top_deep_q):
                 df_batch,
                 ms1_centroid,
                 ms2_centroid,
-                param_g.tol_ppm,
-                param_g.tol_im_xic,
+                cfg.tol_ppm,
+                cfg.tol_im_xic,
                 cycle_num=cycle_num,
                 only_xic=False
             )
@@ -317,10 +317,10 @@ def seek_locus(df_target, ms, model_center, top_sa_q, top_deep_q):
                 df_batch,
                 ms1_profile,
                 ms2_profile,
-                param_g.map_cycle_dim,
-                param_g.map_im_gap, param_g.map_im_dim,
-                param_g.tol_ppm,
-                param_g.tol_im_map,
+                cfg.map_cycle_dim,
+                cfg.map_im_gap, cfg.map_im_dim,
+                cfg.tol_ppm,
+                cfg.tol_im_map,
                 neutron_num=0,
                 return_feature=False
             )
@@ -345,7 +345,7 @@ def seek_locus(df_target, ms, model_center, top_sa_q, top_deep_q):
         df.pr_id.nunique(), len(df)
     )
     logger.info(info)
-    utils.cal_acc_recall(param_g.ws_single, df[df.decoy == 0], diann_q_pr=0.01)
+    utils.cal_acc_recall(cfg.ws_single, df[df.decoy == 0], diann_q_pr=0.01)
 
     return df
 
@@ -353,10 +353,10 @@ def seek_locus(df_target, ms, model_center, top_sa_q, top_deep_q):
 def cal_recall_seek_locus(
         df_lib, ms, model, tol_rt, top_sa_cut, top_deep_cut
 ):
-    if not param_g.is_compare_mode:
+    if not cfg.is_compare_mode:
         return
 
-    df_diann = pd.read_csv(param_g.ws_single / 'diann' / 'report.tsv', sep='\t')
+    df_diann = pd.read_csv(cfg.ws_single / 'diann' / 'report.tsv', sep='\t')
     df_diann = df_diann[df_diann['Q.Value'] < 0.01]
     df_diann['pr_id'] = df_diann['Modified.Sequence'] + df_diann[
         'Precursor.Charge'].astype(str)
@@ -386,7 +386,7 @@ def cal_recall_seek_locus(
         all_rts = ms1_profile['scan_rts']
 
         # by coelution scores using sa func
-        batch_n = param_g.batch_xic_locus
+        batch_n = cfg.batch_xic_locus
         for batch_idx, df_batch in df_swath.groupby(df_swath.index // batch_n):
             df_batch = df_batch.reset_index(drop=True)
 
@@ -396,14 +396,14 @@ def cal_recall_seek_locus(
                 df_batch,
                 ms1_centroid,
                 ms2_centroid,
-                param_g.tol_ppm,
-                param_g.tol_im_xic,
+                cfg.tol_ppm,
+                cfg.tol_im_xic,
                 cycle_num=13,
                 only_xic=True
             )
             xics = fxic.gpu_simple_smooth(xics)
             _, sa_m = fxic.cal_coelution_by_gaussion(xics,
-                                                     param_g.window_points,
+                                                     cfg.window_points,
                                                      df_batch.fg_num.values + 2)
             xics = utils.convert_numba_to_tensor(xics)
             locus_start_v, locus_end_v = fxic.estimate_xic_boundary(xics, sa_m[:, :, 6])
@@ -416,14 +416,14 @@ def cal_recall_seek_locus(
                 df_batch,
                 ms1_centroid,
                 ms2_centroid,
-                param_g.tol_ppm,
-                param_g.tol_im_xic,
+                cfg.tol_ppm,
+                cfg.tol_im_xic,
                 tol_rt,
             )
             xics_rt = fxic.gpu_simple_smooth(xics_rt)
             scores_sa, scores_sa_m = fxic.cal_coelution_by_gaussion(
                 xics_rt,
-                param_g.window_points,
+                cfg.window_points,
                 df_batch.fg_num.values + 2
             )
             scores_sa = fxic.screen_locus_by_sa(scores_sa, top_sa_cut)
@@ -445,8 +445,8 @@ def cal_recall_seek_locus(
                 df_batch,
                 ms1_centroid,
                 ms2_centroid,
-                param_g.tol_ppm,
-                param_g.tol_im_xic,
+                cfg.tol_ppm,
+                cfg.tol_im_xic,
                 cycle_num=cycle_num,
                 only_xic=False
             )
@@ -459,10 +459,10 @@ def cal_recall_seek_locus(
                 df_batch,
                 ms1_profile,
                 ms2_profile,
-                param_g.map_cycle_dim,
-                param_g.map_im_gap, param_g.map_im_dim,
-                param_g.tol_ppm,
-                param_g.tol_im_map,
+                cfg.map_cycle_dim,
+                cfg.map_im_gap, cfg.map_im_dim,
+                cfg.tol_ppm,
+                cfg.tol_im_map,
                 neutron_num=0,
                 return_feature=False
             )
@@ -485,7 +485,7 @@ def cal_recall_seek_locus(
         top_sa_cut, len(df) / len(df_diann)
     )
     logger.info(info)
-    utils.cal_acc_recall(param_g.ws_single, df, diann_q_pr=0.01)
+    utils.cal_acc_recall(cfg.ws_single, df, diann_q_pr=0.01)
 
     # recall after sa + deep
     locus_num = np.concatenate(locus_num_v)
@@ -496,7 +496,7 @@ def cal_recall_seek_locus(
         top_sa_cut, top_deep_cut, len(df) / len(df_diann)
     )
     logger.info(info)
-    utils.cal_acc_recall(param_g.ws_single, df, diann_q_pr=0.01)
+    utils.cal_acc_recall(cfg.ws_single, df, diann_q_pr=0.01)
 
     df = df.drop_duplicates(subset='pr_id', ignore_index=True)
     locus_span = df['locus_span'].median()
@@ -505,18 +505,18 @@ def cal_recall_seek_locus(
 
 
 def update_tolerance(df_lib, ms, model_center, model_big, sample_ratio):
-    target_num = int(min(param_g.target_batch_max, sample_ratio * len(df_lib)))
+    target_num = int(min(cfg.target_batch_max, sample_ratio * len(df_lib)))
     logger.info(f'Estimate the tolerance using {target_num} prs ...')
 
     df = df_lib.sample(n=target_num, random_state=42, replace=False)
     df = df.reset_index(drop=True)
 
     # seek for targets and decoys
-    df1 = make_decoys(df, param_g.fg_num, method='mutate')
+    df1 = make_decoys(df, cfg.fg_num, method='mutate')
     df = pd.concat([df, df1]).reset_index(drop=True)
     df = seek_locus(df, ms, model_center,
-                    param_g.top_sa_cut,
-                    param_g.top_deep_cut)
+                    cfg.top_sa_cut,
+                    cfg.top_deep_cut)
     df = cal_fg_mz_iso(df)
     df = scoring.score_locus(df, ms, model_center, model_big)
     df, model_nn, scaler = fdr.cal_q_pr_batch(df, 50, 12)
@@ -552,27 +552,27 @@ def update_tolerance(df_lib, ms, model_center, model_big, sample_ratio):
         cut2 = np.percentile(x, 95)
         tol_ppm = max(cut1, cut2)
 
-        param_g.tol_rt = tol_rt
-        param_g.tol_im_xic = tol_im
-        param_g.tol_ppm = tol_ppm
+        cfg.tol_rt = tol_rt
+        cfg.tol_im_xic = tol_im
+        cfg.tol_ppm = tol_ppm
     else:
-        param_g.tol_im_xic = param_g.tol_im_xic_after_calib
+        cfg.tol_im_xic = cfg.tol_im_xic_after_calib
 
     info = 'tol_rt: {:.2f}, tol_im: {:.3f}, tol_ppm: {:.2f}'.format(
-        param_g.tol_rt, param_g.tol_im_xic, param_g.tol_ppm
+        cfg.tol_rt, cfg.tol_im_xic, cfg.tol_ppm
     )
     logger.info(info)
 
 
 def select_main_other(df):
-    df_main = df[df['q_pr_run'] < param_g.rubbish_q_cut].copy()
+    df_main = df[df['q_pr_run'] < cfg.rubbish_q_cut].copy()
 
     cols_base = ['pr_id', 'pr_charge', 'pr_index',
                  'swath_id', 'decoy', 'locus',
                  'measure_rt', 'measure_im'
                  ]
     cols_base += ['pr_mz', 'score_elute_span_left', 'score_elute_span_right']
-    cols_base += ['fg_mz_' + str(i) for i in range(param_g.fg_num)]
+    cols_base += ['fg_mz_' + str(i) for i in range(cfg.fg_num)]
     df_other = df.loc[df['decoy'] == 0, cols_base].copy()
 
     return df_main, df_other
@@ -580,25 +580,25 @@ def select_main_other(df):
 
 def main_search(lib):
     df_second_v = []
-    for ws_i, ws_single in enumerate(param_g.multi_ws):
+    for ws_i, ws_single in enumerate(cfg.multi_ws):
         # ws_single
-        init_single_ws(ws_i, param_g.file_num, ws_single)
-        if (param_g.dir_out_global/(ws_single.name + '.parquet')).exists():
-            if (not param_g.is_overwrite) and (param_g.phase == 'First'):
+        init_single_ws(ws_i, cfg.file_num, ws_single)
+        if (cfg.dir_out_global/(ws_single.name + '.parquet')).exists():
+            if (not cfg.is_overwrite) and (cfg.phase == 'First'):
                 continue
 
         ms = load_ms(ws_single)
         # utils.get_diann_info(ws_single)
 
         # set tol_rt
-        param_g.tol_rt = ms.get_scan_rts()[-1] * param_g.tol_rt_ratio
+        cfg.tol_rt = ms.get_scan_rts()[-1] * cfg.tol_rt_ratio
         cycle_time = np.diff(ms.get_scan_rts()).mean()
-        param_g.locus_rt_thre = cycle_time * param_g.locus_valid_num
+        cfg.locus_rt_thre = cycle_time * cfg.locus_valid_num
 
         # polish lib
         df_lib = lib.polish_lib_by_swath(
             ms.get_swath(),
-        #     ws_diann= param_g.ws_single  # for debug
+        #     ws_diann= cfg.ws_single  # for debug
         )
 
         # load the pretrained models
@@ -608,32 +608,32 @@ def main_search(lib):
         cal_recall_seek_seed(df_lib, ms, model_center)
         df_seed = seek_seed(df_lib, ms, model_center)
         utils.save_as_pkl(df_seed, 'df_seed.pkl')
-        # df_seed = pd.read_pickle(param_g.dir_out_single / 'df_seed.pkl')
+        # df_seed = pd.read_pickle(cfg.dir_out_single / 'df_seed.pkl')
 
         # update tol
         df_seed, df_lib = calib.update_info_rt(df_seed, df_lib)
         df_seed, df_lib = calib.update_info_im(df_seed, df_lib)
         df_seed = calib.update_info_mz(df_seed, ms)
         del df_seed
-        update_tolerance(df_lib, ms, model_center, model_big, param_g.sample_ratio)
+        update_tolerance(df_lib, ms, model_center, model_big, cfg.sample_ratio)
 
         # check params for seek_locus
         cal_recall_seek_locus(
             df_lib, ms, model_center,
-            tol_rt=param_g.tol_rt,
-            top_sa_cut=param_g.top_sa_cut,
-            top_deep_cut=param_g.top_deep_cut,
+            tol_rt=cfg.tol_rt,
+            top_sa_cut=cfg.top_sa_cut,
+            top_deep_cut=cfg.top_deep_cut,
         )
 
         # batch division
-        batch_num = int(np.ceil(len(df_lib) / param_g.target_batch_max))
+        batch_num = int(np.ceil(len(df_lib) / cfg.target_batch_max))
         rows_idx = np.array_split(df_lib.index.values, batch_num)
         df_main_v, df_other_v = [], []
         for batch_idx in range(len(rows_idx)):
             if batch_idx % 3 == 0:
                 logger.disabled = False
                 info = '-------------Run-{}/{}-Batch-{}/{}-------------'.format(
-                    ws_i+1, param_g.file_num, batch_idx+1, batch_num
+                    ws_i+1, cfg.file_num, batch_idx+1, batch_num
                 )
                 logger.info(info)
             else:
@@ -642,11 +642,11 @@ def main_search(lib):
             df = df_lib.iloc[rows_idx[batch_idx]].reset_index(drop=True)
 
             # seek for targets and decoys
-            df1 = make_decoys(df, param_g.fg_num, method='mutate')
+            df1 = make_decoys(df, cfg.fg_num, method='mutate')
             df = pd.concat([df, df1]).reset_index(drop=True)
             df = seek_locus(df, ms, model_center,
-                            param_g.top_sa_cut,
-                            param_g.top_deep_cut)
+                            cfg.top_sa_cut,
+                            cfg.top_deep_cut)
 
             # scoring by first round
             df = cal_fg_mz_iso(df)
@@ -657,7 +657,7 @@ def main_search(lib):
             else:
                 df, _, _ = fdr.cal_q_pr_batch(df, 50, 12, model_nn, scaler)
             df_main, df_other = select_main_other(df)
-            utils.print_ids(df_main, param_g.rubbish_q_cut, 'pr', 'run')
+            utils.print_ids(df_main, cfg.rubbish_q_cut, 'pr', 'run')
             df_main_v.append(df_main)
             df_other_v.append(df_other)
         df_main = pd.concat(df_main_v, axis=0, ignore_index=True)
@@ -670,7 +670,7 @@ def main_search(lib):
         utils.print_ids(df_main, 1, 'pr', 'run')
         logger.info('--------------------------------------------------------')
         utils.save_as_pkl(df_main, 'df_scores1.pkl')
-        # df = pd.read_pickle(param_g.dir_out_single / 'df_scores1.pkl')
+        # df = pd.read_pickle(cfg.dir_out_single / 'df_scores1.pkl')
 
         # retrain models
         model_center, model_big, model_mall = refine_models(
@@ -680,7 +680,7 @@ def main_search(lib):
         # scoring by second round
         df_main = scoring.update_scores(df_main, ms, model_center, model_big, model_mall)
         utils.save_as_pkl(df_main, 'df_scores2.pkl')
-        # df_main = pd.read_pickle(param_g.dir_out_single / 'df_scores2.pkl')
+        # df_main = pd.read_pickle(cfg.dir_out_single / 'df_scores2.pkl')
 
         # scoring using DIA-NN sa and quant fg ions
         df_main = df_main[df_main['score_deep_center_sub_left_refine'] > 0].reset_index(drop=True)
@@ -689,14 +689,14 @@ def main_search(lib):
         df_other = quant.quant_center_ions(df_other, ms)
         utils.save_as_pkl(df_main, 'df_main.pkl')
         utils.save_as_pkl(df_other, 'df_other.pkl')
-        # df_main = pd.read_pickle(param_g.dir_out_single / 'df_main.pkl')
-        # df_other = pd.read_pickle(param_g.dir_out_single / 'df_other.pkl')
+        # df_main = pd.read_pickle(cfg.dir_out_single / 'df_main.pkl')
+        # df_other = pd.read_pickle(cfg.dir_out_single / 'df_other.pkl')
 
         # update FDR-Pr for second round
         df_main = fdr.cal_q_pr_first(df_main, 50, 12)
         utils.print_ids(df_main, 1, 'pr', 'run')
         utils.save_as_pkl(df_main, 'df_fdr1.pkl')
-        # df_main = pd.read_pickle(param_g.dir_out_single / 'df_fdr1.pkl')
+        # df_main = pd.read_pickle(cfg.dir_out_single / 'df_fdr1.pkl')
 
         # polish target prs and update FDR again
         df_main = polish.polish_prs(df_main)
@@ -704,20 +704,20 @@ def main_search(lib):
         df_main = polish.polish_prs(df_main)
         utils.print_ids(df_main, 1, 'pr', 'run')
         utils.save_as_pkl(df_main, 'df_fdr2.pkl')
-        # df_main = pd.read_pickle(param_g.dir_out_single / 'df_fdr2.pkl')
+        # df_main = pd.read_pickle(cfg.dir_out_single / 'df_fdr2.pkl')
 
         # save first pass result
-        if param_g.phase == 'First':
+        if cfg.phase == 'First':
             logger.info('Saving run-specific result as parquet...')
             utils.save_or_clean(df_main, df_other, ws_single, 'First')
             logger.info('Saving finished.')
-        if param_g.phase == 'Second':
+        if cfg.phase == 'Second':
             df = utils.save_or_clean(df, ws_single, 'Second')
             df_second_v.append(df)
 
         # release within loop
         del df_lib, df, ms
-        param_g.tol_im_xic = param_g.tol_im_xic_before_calib
-        param_g.tol_ppm = 20.
+        cfg.tol_im_xic = cfg.tol_im_xic_before_calib
+        cfg.tol_ppm = 20.
 
     return df_second_v

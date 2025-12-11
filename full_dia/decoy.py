@@ -4,7 +4,7 @@ import operator
 import numpy as np
 from numba import cuda
 
-from full_dia import param_g
+from full_dia import cfg
 from full_dia import utils
 from full_dia.log import Logger
 
@@ -75,7 +75,7 @@ def convert_seq_to_mass(simple_seq):
     s = list(s)
 
     f = operator.itemgetter(*s)
-    mass = f(param_g.mass_aa)
+    mass = f(cfg.mass_aa)
 
     return mass, seq_len_cumsum
 
@@ -83,29 +83,29 @@ def convert_seq_to_mass(simple_seq):
 def cal_fg_mz_iso(df):
     mass_neutron = 1.0033548378
 
-    cols_center = ['fg_mz_' + str(i) for i in range(param_g.fg_num)]
+    cols_center = ['fg_mz_' + str(i) for i in range(cfg.fg_num)]
     fg_mz_m = df[cols_center].values
 
-    cols_anno = ['fg_anno_' + str(i) for i in range(param_g.fg_num)]
+    cols_anno = ['fg_anno_' + str(i) for i in range(cfg.fg_num)]
     fg_anno_m = df[cols_anno].values
     fg_charge_m = fg_anno_m % 10
 
     fg_mz_left = (fg_mz_m * fg_charge_m - mass_neutron) / fg_charge_m
     fg_mz_left[fg_mz_m <= 0.] = 0.
     fg_mz_left = fg_mz_left.astype(np.float32)
-    cols_left = ['fg_mz_left_' + str(i) for i in range(param_g.fg_num)]
+    cols_left = ['fg_mz_left_' + str(i) for i in range(cfg.fg_num)]
     df[cols_left] = fg_mz_left
 
     fg_mz_1H = (fg_mz_m * fg_charge_m + mass_neutron) / fg_charge_m
     fg_mz_1H[fg_mz_m <= 0.] = 0.
     fg_mz_1H = fg_mz_1H.astype(np.float32)
-    cols_1H = ['fg_mz_1H_' + str(i) for i in range(param_g.fg_num)]
+    cols_1H = ['fg_mz_1H_' + str(i) for i in range(cfg.fg_num)]
     df[cols_1H] = fg_mz_1H
 
     fg_mz_2H = (fg_mz_m * fg_charge_m + 2 * mass_neutron) / fg_charge_m
     fg_mz_2H[fg_mz_m <= 0.] = 0.
     fg_mz_2H = fg_mz_2H.astype(np.float32)
-    cols_2H = ['fg_mz_2H_' + str(i) for i in range(param_g.fg_num)]
+    cols_2H = ['fg_mz_2H_' + str(i) for i in range(cfg.fg_num)]
     df[cols_2H] = fg_mz_2H
 
     return df

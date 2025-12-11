@@ -6,7 +6,7 @@ from numba import cuda
 import torch
 
 from full_dia import fxic
-from full_dia import param_g
+from full_dia import cfg
 from full_dia import utils
 from full_dia.log import Logger
 
@@ -32,7 +32,7 @@ def mask_tensor(x, left, right):
 
 @profile
 def interp_xics(x, rts_input, target_dim):
-    rts = torch.from_numpy(rts_input).to(param_g.gpu_id)
+    rts = torch.from_numpy(rts_input).to(cfg.gpu_id)
 
     n_pr, n_ion, n_cycle = x.shape
 
@@ -124,10 +124,10 @@ def interference_correction(xics, best_profile):
 @profile
 def grid_xic_best(df_batch, ms1_centroid, ms2_centroid):
     locus_start_v = df_batch['score_elute_span_left'].values
-    locus_start_v = torch.from_numpy(locus_start_v).to(param_g.gpu_id)
+    locus_start_v = torch.from_numpy(locus_start_v).to(cfg.gpu_id)
 
     locus_end_v = df_batch['score_elute_span_right'].values
-    locus_end_v = torch.from_numpy(locus_end_v).to(param_g.gpu_id)
+    locus_end_v = torch.from_numpy(locus_end_v).to(cfg.gpu_id)
 
     tol_ppm_v = [20., 16., 12., 8., 4.]
     tol_im_v = [0.02, 0.01]
@@ -220,7 +220,7 @@ def quant_center_ions(df_input, ms):
         ms1_centroid, ms2_centroid = ms.copy_map_to_gpu(swath_id, centroid=True)
 
         # in batches
-        batch_n = param_g.batch_xic_locus
+        batch_n = cfg.batch_xic_locus
         for batch_idx, df_batch in df_swath.groupby(df_swath.index // batch_n):
             df_batch = df_batch.reset_index(drop=True)
 
@@ -228,9 +228,9 @@ def quant_center_ions(df_input, ms):
             areas, sas = grid_xic_best(df_batch, ms1_centroid, ms2_centroid)
 
             # save
-            cols = ['score_ion_quant_' + str(i) for i in range(param_g.fg_num + 2)]
+            cols = ['score_ion_quant_' + str(i) for i in range(cfg.fg_num + 2)]
             df_batch[cols] = areas
-            cols = ['score_ion_sa_' + str(i) for i in range(param_g.fg_num + 2)]
+            cols = ['score_ion_sa_' + str(i) for i in range(cfg.fg_num + 2)]
             df_batch[cols] = sas
             df_good.append(df_batch)
         utils.release_gpu_scans(ms1_centroid, ms2_centroid)

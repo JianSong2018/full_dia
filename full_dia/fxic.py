@@ -7,7 +7,7 @@ import torch
 import torch.nn.functional as F
 from numba import cuda
 
-from full_dia import param_g
+from full_dia import cfg
 from full_dia import utils
 from full_dia.log import Logger
 
@@ -125,7 +125,7 @@ def cal_coelution_by_gaussion(xics, window_points, valids_num):
     '''
     Coelution scores by sliding windows methods
     '''
-    valids_num = torch.from_numpy(valids_num).to(param_g.gpu_id)
+    valids_num = torch.from_numpy(valids_num).to(cfg.gpu_id)
 
     # block -- profile
     block_num = xics.shape[0] * xics.shape[1]
@@ -410,7 +410,7 @@ def extract_xics(df,
     # params
     if scope == 'center':
         query_mz_ms1 = df[['pr_mz', 'pr_mz']].values
-        fg_mz_cols = ['fg_mz_' + str(i) for i in range(param_g.fg_num)]
+        fg_mz_cols = ['fg_mz_' + str(i) for i in range(cfg.fg_num)]
         query_mz_ms2 = df[fg_mz_cols].values
         query_mz_m = np.concatenate([query_mz_ms1, query_mz_ms2], axis=1)
         ms1_ion_num = 1
@@ -418,18 +418,18 @@ def extract_xics(df,
         ms1_cols = ['pr_mz_left', 'pr_mz', 'pr_mz_1H', 'pr_mz_2H',
                     'pr_mz_left', 'pr_mz', 'pr_mz_1H', 'pr_mz_2H']  # unfrag
         ms1 = df[ms1_cols].values
-        cols_left = ['fg_mz_left_' + str(i) for i in range(param_g.fg_num)]
+        cols_left = ['fg_mz_left_' + str(i) for i in range(cfg.fg_num)]
         left = df[cols_left].values
-        cols_center = ['fg_mz_' + str(i) for i in range(param_g.fg_num)]
+        cols_center = ['fg_mz_' + str(i) for i in range(cfg.fg_num)]
         center = df[cols_center].values
-        cols_1H = ['fg_mz_1H_' + str(i) for i in range(param_g.fg_num)]
+        cols_1H = ['fg_mz_1H_' + str(i) for i in range(cfg.fg_num)]
         fg_1H = df[cols_1H].values
-        cols_2H = ['fg_mz_2H_' + str(i) for i in range(param_g.fg_num)]
+        cols_2H = ['fg_mz_2H_' + str(i) for i in range(cfg.fg_num)]
         fg_2H = df[cols_2H].values
         query_mz_m = np.concatenate([ms1, left, center, fg_1H, fg_2H], axis=1)
         ms1_ion_num = 4
     elif scope == 'top6':
-        cols_center = ['fg_mz_' + str(i) for i in range(param_g.fg_num)]
+        cols_center = ['fg_mz_' + str(i) for i in range(cfg.fg_num)]
         query_mz_m = np.ascontiguousarray(df[cols_center].values[:, :6])
         ms1_ion_num = 0
 
@@ -752,7 +752,7 @@ def update_sa_by_grid(df, ms):
         ms1_centroid, ms2_centroid = ms.copy_map_to_gpu(swath_id, centroid=True)
 
         # in batches
-        batch_n = param_g.batch_xic_locus
+        batch_n = cfg.batch_xic_locus
         for batch_idx, df_batch in df_swath.groupby(df_swath.index // batch_n):
             df_batch = df_batch.reset_index(drop=True)
 

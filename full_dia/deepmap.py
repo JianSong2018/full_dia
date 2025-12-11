@@ -6,7 +6,7 @@ import torch
 from numba import cuda
 
 from full_dia import models
-from full_dia import param_g
+from full_dia import cfg
 from full_dia import utils
 from full_dia.utils import create_cuda_zeros
 
@@ -17,10 +17,10 @@ except:
     profile = lambda x: x
 
 def load_models(dir_center=None, dir_big=None):
-    channels = 2 + param_g.fg_num
+    channels = 2 + cfg.fg_num
     model_center = load_model_center(dir_center, channels)
 
-    channels = 4*(2 + param_g.fg_num)
+    channels = 4*(2 + cfg.fg_num)
     model_big = load_model_big(dir_big, channels)
 
     # import torch._dynamo
@@ -33,7 +33,7 @@ def load_models(dir_center=None, dir_big=None):
 
 def load_model_big(dir_model, channels):
     model = models.DeepMap(channels)
-    device = param_g.gpu_id
+    device = cfg.gpu_id
     if dir_model is None:
         pt_path = Path(__file__).resolve().parent/'pretrained'/'deepbig_ys_fast.pt'
         model.load_state_dict(torch.load(pt_path, map_location=device))
@@ -46,7 +46,7 @@ def load_model_big(dir_model, channels):
 
 def load_model_center(dir_model, channels):
     model = models.DeepMap(channels)
-    device = param_g.gpu_id
+    device = cfg.gpu_id
     if dir_model is None:
         pt_path = Path(__file__).resolve().parent/'pretrained'/'deepcenter_ys_fast.pt'
         model.load_state_dict(torch.load(pt_path, map_location=device))
@@ -313,21 +313,21 @@ def extract_maps(df_batch,
     elif neutron_num == 0:
         query_mz_ms1 = df_batch['pr_mz'].values
         query_mz_ms1 = np.tile(query_mz_ms1, (2, 1)).T
-        cols_center = ['fg_mz_' + str(i) for i in range(param_g.fg_num)]
+        cols_center = ['fg_mz_' + str(i) for i in range(cfg.fg_num)]
         query_mz_ms2 = df_batch[cols_center].values
         query_mz_m = np.concatenate([query_mz_ms1, query_mz_ms2], axis=1)
         ms1_ion_num = 1
     elif neutron_num == 1:
         query_mz_ms1 = df_batch['pr_mz_1H'].values
         query_mz_ms1 = np.tile(query_mz_ms1, (2, 1)).T
-        cols_1H = ['fg_mz_1H_' + str(i) for i in range(param_g.fg_num)]
+        cols_1H = ['fg_mz_1H_' + str(i) for i in range(cfg.fg_num)]
         query_mz_ms2 = df_batch[cols_1H].values
         query_mz_m = np.concatenate([query_mz_ms1, query_mz_ms2], axis=1)
         ms1_ion_num = 1
     elif neutron_num == 2:
         query_mz_ms1 = df_batch['pr_mz_2H'].values
         query_mz_ms1 = np.tile(query_mz_ms1, (2, 1)).T
-        cols_2H = ['fg_mz_2H_' + str(i) for i in range(param_g.fg_num)]
+        cols_2H = ['fg_mz_2H_' + str(i) for i in range(cfg.fg_num)]
         query_mz_ms2 = df_batch[cols_2H].values
         query_mz_m = np.concatenate([query_mz_ms1, query_mz_ms2], axis=1)
         ms1_ion_num = 1
@@ -335,13 +335,13 @@ def extract_maps(df_batch,
         ms1_cols = ['pr_mz_left', 'pr_mz', 'pr_mz_1H', 'pr_mz_2H',
                     'pr_mz_left', 'pr_mz', 'pr_mz_1H', 'pr_mz_2H'] # unfrag
         ms1 = df_batch[ms1_cols].values
-        cols_left = ['fg_mz_left_' + str(i) for i in range(param_g.fg_num)]
+        cols_left = ['fg_mz_left_' + str(i) for i in range(cfg.fg_num)]
         left = df_batch[cols_left].values
-        cols_center = ['fg_mz_' + str(i) for i in range(param_g.fg_num)]
+        cols_center = ['fg_mz_' + str(i) for i in range(cfg.fg_num)]
         center = df_batch[cols_center].values
-        cols_1H = ['fg_mz_1H_' + str(i) for i in range(param_g.fg_num)]
+        cols_1H = ['fg_mz_1H_' + str(i) for i in range(cfg.fg_num)]
         fg_1H = df_batch[cols_1H].values
-        cols_2H = ['fg_mz_2H_' + str(i) for i in range(param_g.fg_num)]
+        cols_2H = ['fg_mz_2H_' + str(i) for i in range(cfg.fg_num)]
         fg_2H = df_batch[cols_2H].values
         query_mz_m = np.concatenate([ms1, left, center, fg_1H, fg_2H], axis=1)
         ms1_ion_num = 4
@@ -431,7 +431,7 @@ def scoring_maps(
 
     # in batches
     feature_v, pred_v = [], []
-    batch_num = param_g.batch_deep_center
+    batch_num = cfg.batch_deep_center
     for batch_idx, df_batch in df_input.groupby(df_input.index // batch_num):
         maps = extract_maps(df_batch,
                             idx_start_m,
@@ -449,10 +449,10 @@ def scoring_maps(
                          maps.shape[3],
                          maps.shape[4])
         # valid ion nums
-        non_fg_num = maps.shape[1] - param_g.fg_num
+        non_fg_num = maps.shape[1] - cfg.fg_num
         valid_ion_nums = non_fg_num + df_batch['fg_num'].values
         valid_ion_nums = torch.from_numpy(
-            np.repeat(valid_ion_nums, locus_num)).long().to(param_g.gpu_id)
+            np.repeat(valid_ion_nums, locus_num)).long().to(cfg.gpu_id)
         with torch.no_grad():
             # with torch.cuda.amp.autocast():
             feature, pred = model(maps, valid_ion_nums)
@@ -520,13 +520,13 @@ def extract_scoring_big(
     ms1_cols = ['pr_mz_left', 'pr_mz', 'pr_mz_1H', 'pr_mz_2H',
                 'pr_mz_left', 'pr_mz', 'pr_mz_1H', 'pr_mz_2H']  # unfrag
     ms1 = df_input[ms1_cols].values
-    cols_left = ['fg_mz_left_' + str(i) for i in range(param_g.fg_num)]
+    cols_left = ['fg_mz_left_' + str(i) for i in range(cfg.fg_num)]
     left = df_input[cols_left].values
-    cols_center = ['fg_mz_' + str(i) for i in range(param_g.fg_num)]
+    cols_center = ['fg_mz_' + str(i) for i in range(cfg.fg_num)]
     center = df_input[cols_center].values
-    cols_1H = ['fg_mz_1H_' + str(i) for i in range(param_g.fg_num)]
+    cols_1H = ['fg_mz_1H_' + str(i) for i in range(cfg.fg_num)]
     fg_1H = df_input[cols_1H].values
-    cols_2H = ['fg_mz_2H_' + str(i) for i in range(param_g.fg_num)]
+    cols_2H = ['fg_mz_2H_' + str(i) for i in range(cfg.fg_num)]
     fg_2H = df_input[cols_2H].values
     query_mz_m = np.concatenate([ms1, left, center, fg_1H, fg_2H], axis=1)
     ms1_ion_num = 4
@@ -580,7 +580,7 @@ def extract_scoring_big(
             valid_ion_nums = 4 * (2 + df_input['fg_num'].values)
             model = model_big
         maps_sub = maps[:, idx]
-        valid_ion_nums = torch.from_numpy(valid_ion_nums).long().to(param_g.gpu_id)
+        valid_ion_nums = torch.from_numpy(valid_ion_nums).long().to(cfg.gpu_id)
         with torch.no_grad():
             # with torch.cuda.amp.autocast():
             feature, pred = model(maps_sub, valid_ion_nums)
