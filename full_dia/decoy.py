@@ -75,7 +75,7 @@ def convert_seq_to_mass(simple_seq):
     s = list(s)
 
     f = operator.itemgetter(*s)
-    mass = f(param_g.g_aa_to_mass)
+    mass = f(param_g.mass_aa)
 
     return mass, seq_len_cumsum
 
